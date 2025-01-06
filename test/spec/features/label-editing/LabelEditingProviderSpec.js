@@ -11,7 +11,7 @@ import autoPlaceModule from 'lib/features/auto-place';
 
 import {
   getLabel
-} from 'lib/features/label-editing/LabelUtil';
+} from 'lib/util/LabelUtil';
 
 import {
   createCanvasEvent as canvasEvent
@@ -500,6 +500,10 @@ describe('features - label-editing', function() {
 
       it('pool, collapsed', directEdit('Participant_2'));
 
+      it('vertical pool', directEdit('Participant_3'));
+
+      it('vertical pool, collapsed', directEdit('Participant_4'));
+
 
       it('lane with label', directEdit('Lane_1'));
 
@@ -518,36 +522,59 @@ describe('features - label-editing', function() {
     });
 
 
-    describe('after elements create', function() {
+    describe('on element creation', function() {
 
-      var createTaskElement;
+      function createTaskElement(context) {
+        var shape = elementFactory.create('shape', { type: 'bpmn:Task' }),
+            parent = elementRegistry.get('SubProcess_1'),
+            parentGfx = elementRegistry.getGraphics(parent);
 
-      beforeEach(function() {
+        create.start(canvasEvent({ x: 0, y: 0 }), [ shape ], context);
+        dragging.hover({
+          element: parent,
+          gfx: parentGfx
+        });
+        dragging.move(canvasEvent({ x: 400, y: 250 }));
+        dragging.end();
+      }
 
-        createTaskElement = function(context) {
+      function createParticipant() {
 
-          var shape = elementFactory.create('shape', { type: 'bpmn:Task' }),
-              parent = elementRegistry.get('SubProcess_1'),
-              parentGfx = elementRegistry.getGraphics(parent);
+        var collaboration = elementRegistry.get('Collaboration_1o0amh9'),
+            collaborationGfx = elementRegistry.getGraphics(collaboration);
 
-          create.start(canvasEvent({ x: 0, y: 0 }), [ shape ], context);
-          dragging.hover({
-            element: parent,
-            gfx: parentGfx
-          });
-          dragging.move(canvasEvent({ x: 400, y: 250 }));
-          dragging.end();
-        };
-
-      });
-
-      it('should activate', function() {
+        var participant = elementFactory.createParticipantShape();
 
         // when
-        createTaskElement();
+        create.start(canvasEvent({ x: 400, y: 300 }), participant);
 
-        // then
-        expect(directEditing.isActive()).to.be.true;
+        dragging.hover({ element: collaboration, gfx: collaborationGfx });
+        dragging.move(canvasEvent({ x: 400, y: 300 }));
+
+        dragging.end();
+      }
+
+
+      describe('should activate', function() {
+
+        it('on Task creation', function() {
+
+          // when
+          createTaskElement();
+
+          // then
+          expect(directEditing.isActive()).to.be.true;
+        });
+
+
+        it('on Participant creation', function() {
+
+          // when
+          createParticipant();
+
+          // then
+          expect(directEditing.isActive()).to.be.true;
+        });
 
       });
 
@@ -903,6 +930,182 @@ describe('features - label-editing', function() {
               y: mid.y - (30 * zoom) / 2,
               width: bounds.height,
               height: 30 * zoom
+            });
+          }
+        ));
+
+      });
+
+
+      describe('collapsed pools', function() {
+
+        it('[zoom 1] should have width/height of element', inject(
+          function(canvas, directEditing, elementRegistry) {
+
+            // given
+            var zoom = 1;
+
+            canvas.zoom(zoom);
+
+            var pool = elementRegistry.get('Participant_2');
+
+            var bounds = canvas.getAbsoluteBBox(pool);
+
+            // when
+            directEditing.activate(pool);
+
+            // then
+            expectBounds(directEditing._textbox.parent, {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height
+            });
+          }
+        ));
+
+
+        it('[zoom 1.5] should have width/height of element', inject(
+          function(canvas, directEditing, elementRegistry) {
+
+            // given
+            var zoom = 1.5;
+
+            canvas.zoom(zoom);
+
+            var pool = elementRegistry.get('Participant_2');
+
+            var bounds = canvas.getAbsoluteBBox(pool);
+
+            // when
+            directEditing.activate(pool);
+
+            // then
+            expectBounds(directEditing._textbox.parent, {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height
+            });
+          }
+        ));
+
+      });
+
+
+      describe('vertical pools/lanes', function() {
+
+        it('[zoom 1] should have width of element width, height of 30', inject(
+          function(canvas, directEditing, elementRegistry) {
+
+            // given
+            var zoom = 1;
+
+            canvas.zoom(zoom);
+
+            var pool = elementRegistry.get('Participant_3');
+
+            var bounds = canvas.getAbsoluteBBox(pool);
+
+            // when
+            directEditing.activate(pool);
+
+            // then
+            expectBounds(directEditing._textbox.parent, {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: 30 * zoom
+            });
+          }
+        ));
+
+
+        it('[zoom 1.5] should have width of element width, height of 30', inject(
+          function(canvas, directEditing, elementRegistry) {
+
+            // given
+            var zoom = 1.5;
+
+            canvas.zoom(zoom);
+
+            var pool = elementRegistry.get('Participant_3');
+
+            var bounds = canvas.getAbsoluteBBox(pool);
+
+            // when
+            directEditing.activate(pool);
+
+            // then
+            expectBounds(directEditing._textbox.parent, {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: 30 * zoom
+            });
+          }
+        ));
+
+      });
+
+
+      describe('vertical collapsed pools', function() {
+
+        it('[zoom 1] should have width/height of element', inject(
+          function(canvas, directEditing, elementRegistry) {
+
+            // given
+            var zoom = 1;
+
+            canvas.zoom(zoom);
+
+            var pool = elementRegistry.get('Participant_4');
+
+            var bounds = canvas.getAbsoluteBBox(pool);
+            var mid = {
+              x: bounds.x + bounds.width / 2,
+              y: bounds.y + bounds.height / 2
+            };
+
+            // when
+            directEditing.activate(pool);
+
+            // then
+            expectBounds(directEditing._textbox.parent, {
+              x: mid.x - bounds.height / 2,
+              y: mid.y - bounds.width / 2,
+              width: bounds.height,
+              height: bounds.width
+            });
+          }
+        ));
+
+
+        it('[zoom 1.5] should have width/height of element', inject(
+          function(canvas, directEditing, elementRegistry) {
+
+            // given
+            var zoom = 1.5;
+
+            canvas.zoom(zoom);
+
+            var pool = elementRegistry.get('Participant_4');
+
+            var bounds = canvas.getAbsoluteBBox(pool);
+            var mid = {
+              x: bounds.x + bounds.width / 2,
+              y: bounds.y + bounds.height / 2
+            };
+
+            // when
+            directEditing.activate(pool);
+
+            // then
+            expectBounds(directEditing._textbox.parent, {
+              x: mid.x - bounds.height / 2,
+              y: mid.y - bounds.width / 2,
+              width: bounds.height,
+              height: bounds.width
             });
           }
         ));

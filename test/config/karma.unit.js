@@ -1,4 +1,5 @@
 var path = require('path');
+var fs = require('fs');
 
 var collectTranslations = process.env.COLLECT_TRANSLATIONS;
 
@@ -7,11 +8,17 @@ var singleStart = process.env.SINGLE_START;
 var coverage = process.env.COVERAGE;
 
 // configures browsers to run test against
-// any of [ 'ChromeHeadless', 'Chrome', 'Firefox', 'IE', 'PhantomJS' ]
+// any of [ 'ChromeHeadless', 'Chrome', 'Firefox', 'Safari' ]
 var browsers = (process.env.TEST_BROWSERS || 'ChromeHeadless').split(',');
 
 // use puppeteer provided Chrome for testing
 process.env.CHROME_BIN = require('puppeteer').executablePath();
+
+var tmpDir = path.join(__dirname, 'tmp');
+
+fs.mkdirSync(tmpDir, { recursive: true });
+
+var firefoxProfile = fs.mkdtempSync(path.join(tmpDir, 'firefox-profile'));
 
 var basePath = '../..';
 
@@ -33,7 +40,6 @@ module.exports = function(karma) {
     ],
 
     files: [
-      'node_modules/promise-polyfill/dist/polyfill.js',
       suite
     ],
 
@@ -43,11 +49,23 @@ module.exports = function(karma) {
 
     reporters: [ 'progress' ].concat(coverage ? 'coverage' : []),
 
+    customLaunchers: {
+      'FirefoxHeadless': {
+        base: 'Firefox',
+        flags: [ '-headless' ],
+        profile: firefoxProfile
+      }
+    },
+
     coverageReporter: {
       reporters: [
         { type: 'lcov', subdir: '.' }
       ]
     },
+
+    envPreProcessor: [
+      'CI'
+    ],
 
     browsers,
 
@@ -66,17 +84,24 @@ module.exports = function(karma) {
           },
           {
             test: /\.css|\.bpmn$/,
-            use: 'raw-loader'
+            type: 'asset/source'
           }
-        ].concat(coverage ?
-          {
+        ].concat(
+          coverage ? {
             test: /\.js$/,
+            exclude: /node_modules/,
             use: {
-              loader: 'istanbul-instrumenter-loader',
-              options: { esModules: true }
-            },
-            include: /lib\.*/,
-            exclude: /node_modules/
+              loader: 'babel-loader',
+              options: {
+                plugins: [
+                  [ 'istanbul', {
+                    include: [
+                      'lib/**'
+                    ]
+                  } ]
+                ],
+              }
+            }
           } : []
         )
       },
@@ -96,7 +121,7 @@ module.exports = function(karma) {
   };
 
   if (collectTranslations) {
-    config.plugins = [].concat(config.plugins || ['karma-*'], require('./translation-reporter'));
+    config.plugins = [].concat(config.plugins || [ 'karma-*' ], require('./translation-reporter'));
     config.reporters = [].concat(config.reporters || [], 'translation-reporter');
     config.envPreprocessor = [].concat(config.envPreprocessor || [], 'COLLECT_TRANSLATIONS');
   }

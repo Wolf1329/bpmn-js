@@ -1,3 +1,5 @@
+import { expectToBeAccessible } from '@bpmn-io/a11y';
+
 import {
   bootstrapModeler,
   getBpmnJS,
@@ -304,7 +306,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
     describe('active attribute', function() {
 
-      it('should be true for parallel marker', inject(function(bpmnReplace, elementRegistry) {
+      it('should be true for parallel marker', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('ParallelTask'),
@@ -324,7 +326,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should be true for sequential marker', inject(function(bpmnReplace, elementRegistry) {
+      it('should be true for sequential marker', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('SequentialTask'),
@@ -342,7 +344,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should be true for loop marker', inject(function(bpmnReplace, elementRegistry) {
+      it('should be true for loop marker', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('LoopTask'),
@@ -360,7 +362,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should be true for ad hoc marker', inject(function(bpmnReplace, elementRegistry) {
+      it('should be true for ad hoc marker', inject(function(elementRegistry) {
 
         // given
         var AdHocSubProcess = elementRegistry.get('AdHocSubProcess');
@@ -377,7 +379,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
     describe('exclusive toggle buttons', function() {
 
-      it('should not toggle non exclusive buttons off', inject(function(bpmnReplace, elementRegistry) {
+      it('should not toggle non exclusive buttons off', inject(function(elementRegistry) {
         var subProcess = elementRegistry.get('AdHocSubProcess');
 
         openPopup(subProcess);
@@ -397,7 +399,7 @@ describe('features/popup-menu - replace menu provider', function() {
     describe('non exclusive toggle buttons', function() {
 
       it('should not toggle exclusive buttons off',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var subProcess = elementRegistry.get('SubProcess');
@@ -431,7 +433,7 @@ describe('features/popup-menu - replace menu provider', function() {
     describe('parallel toggle button', function() {
 
       it('should toggle parallel marker off',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var task = elementRegistry.get('ParallelTask');
@@ -452,7 +454,7 @@ describe('features/popup-menu - replace menu provider', function() {
       );
 
 
-      it('should toggle parallel marker on', inject(function(bpmnReplace, elementRegistry) {
+      it('should toggle parallel marker on', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('Task');
@@ -473,7 +475,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set sequential button inactive', inject(function(bpmnReplace, elementRegistry) {
+      it('should set sequential button inactive', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('SequentialTask');
@@ -492,7 +494,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set loop button inactive', inject(function(bpmnReplace, elementRegistry) {
+      it('should set loop button inactive', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('LoopTask');
@@ -511,7 +513,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set loop characteristics type', inject(function(bpmnReplace, elementRegistry) {
+      it('should set loop characteristics type', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('LoopTask'),
@@ -535,20 +537,21 @@ describe('features/popup-menu - replace menu provider', function() {
         // given
         var task = elementRegistry.get('SequentialTask'),
             businessObject = getBusinessObject(task),
-            loopCharacteristics = Object.assign({}, businessObject.loopCharacteristics);
+            loopCharacteristics = businessObject.get('loopCharacteristics');
 
         openPopup(task);
 
         // assume
-        expect(loopCharacteristics.isSequential).to.be.true;
+        expect(loopCharacteristics.get('isSequential')).to.be.true;
 
         // when
         triggerAction('toggle-parallel-mi');
 
         // then
-        var newLoopCharacteristics = businessObject.loopCharacteristics;
+        const newLoopCharacteristics = businessObject.get('loopCharacteristics');
 
-        expect(newLoopCharacteristics.isSequential).to.be.false;
+        expect(newLoopCharacteristics).to.equal(loopCharacteristics);
+        expect(newLoopCharacteristics.get('isSequential')).to.be.false;
         expect(omit(newLoopCharacteristics, 'isSequential')).to.eql(omit(loopCharacteristics, 'isSequential'));
       }));
 
@@ -557,7 +560,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
     describe('sequential toggle button', function() {
 
-      it('should toggle sequential marker off', inject(function(bpmnReplace, elementRegistry) {
+      it('should toggle sequential marker off', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('SequentialTask');
@@ -577,7 +580,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should toggle sequential marker on', inject(function(bpmnReplace, elementRegistry) {
+      it('should toggle sequential marker on', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('Task');
@@ -598,7 +601,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set loop button inactive', inject(function(bpmnReplace, elementRegistry) {
+      it('should set loop button inactive', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('LoopTask');
@@ -617,7 +620,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set parallel button inactive', inject(function(bpmnReplace, elementRegistry) {
+      it('should set parallel button inactive', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('ParallelTask');
@@ -636,7 +639,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set loop characteristics type', inject(function(bpmnReplace, elementRegistry) {
+      it('should set loop characteristics type', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('LoopTask'),
@@ -660,21 +663,22 @@ describe('features/popup-menu - replace menu provider', function() {
         // given
         var task = elementRegistry.get('ParallelTask'),
             businessObject = getBusinessObject(task),
-            loopCharacteristics = Object.assign({}, businessObject.loopCharacteristics);
+            loopCharacteristics = businessObject.get('loopCharacteristics');
 
         openPopup(task);
 
         // assume
-        expect(loopCharacteristics.isSequential).to.be.undefined;
+        expect(loopCharacteristics.get('isSequential')).to.be.false;
 
         // when
         triggerAction('toggle-sequential-mi');
 
         // then
-        var newLoopCharacteristics = businessObject.loopCharacteristics;
+        var newLoopCharacteristics = businessObject.get('loopCharacteristics');
 
-        expect(newLoopCharacteristics.isSequential).to.be.true;
-        expect(omit(newLoopCharacteristics, 'isSequential')).to.eql(loopCharacteristics);
+        expect(newLoopCharacteristics).to.equal(loopCharacteristics);
+        expect(newLoopCharacteristics.get('isSequential')).to.be.true;
+        expect(omit(newLoopCharacteristics, 'isSequential')).to.eql(omit(loopCharacteristics, 'isSequential'));
       }));
 
     });
@@ -682,7 +686,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
     describe('loop toggle button', function() {
 
-      it('should toggle loop marker off', inject(function(bpmnReplace, elementRegistry) {
+      it('should toggle loop marker off', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('LoopTask');
@@ -702,7 +706,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should toggle loop marker on', inject(function(bpmnReplace, elementRegistry) {
+      it('should toggle loop marker on', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('Task');
@@ -722,7 +726,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set sequential button inactive', inject(function(bpmnReplace, elementRegistry) {
+      it('should set sequential button inactive', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('SequentialTask');
@@ -741,7 +745,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set parallel button inactive', inject(function(bpmnReplace, elementRegistry) {
+      it('should set parallel button inactive', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('ParallelTask');
@@ -760,7 +764,7 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
 
 
-      it('should set loop characteristics type', inject(function(bpmnReplace, elementRegistry) {
+      it('should set loop characteristics type', inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('SequentialTask'),
@@ -779,6 +783,170 @@ describe('features/popup-menu - replace menu provider', function() {
       }));
     });
 
+
+    describe('non-interrupting toggle', function() {
+      beforeEach(bootstrapModeler(diagramXMLReplace,{
+        modules: Object.assign(testModules, camundaModdleModule),
+        moddleExtensions: {
+          camunda: camundaPackage
+        }
+      }));
+
+      describe('start events', function() {
+
+        it('should toggle non-interrupting marker off', inject(function(bpmnReplace, elementRegistry) {
+
+          // given
+          var event = elementRegistry.get('StartEvent_3');
+
+          openPopup(event);
+
+          // when
+          triggerAction('toggle-non-interrupting');
+
+          openPopup(event);
+
+          var nonInterruptingEntry = queryEntry('toggle-non-interrupting');
+
+          // then
+          expect(event.businessObject.isInterrupting).to.be.true;
+          expect(domClasses(nonInterruptingEntry).has('active')).to.be.false;
+        }));
+
+
+        it('should toggle non-interrupting marker on', inject(function(bpmnReplace, elementRegistry) {
+
+          // given
+          var event = elementRegistry.get('StartEvent_6');
+
+          openPopup(event);
+
+          // when
+          triggerAction('toggle-non-interrupting');
+
+          openPopup(event);
+
+          var nonInterruptingEntry = queryEntry('toggle-non-interrupting');
+
+          // then
+          expect(event.businessObject.isInterrupting).to.be.false;
+          expect(domClasses(nonInterruptingEntry).has('active')).to.be.true;
+        }));
+
+      });
+
+
+      describe('boundary events', function() {
+
+        it('should toggle non-interrupting marker off', inject(function(bpmnReplace, elementRegistry) {
+
+          // given
+          var event = elementRegistry.get('BoundaryEvent_1');
+
+          openPopup(event);
+
+          // when
+          triggerAction('toggle-non-interrupting');
+
+          openPopup(event);
+
+          var nonInterruptingEntry = queryEntry('toggle-non-interrupting');
+
+          // then
+          expect(event.businessObject.cancelActivity).to.be.true;
+          expect(domClasses(nonInterruptingEntry).has('active')).to.be.false;
+        }));
+
+
+        it('should toggle non-interrupting marker on', inject(function(bpmnReplace, elementRegistry) {
+
+          // given
+          var event = elementRegistry.get('BoundaryEvent_2');
+
+          openPopup(event);
+
+          // when
+          triggerAction('toggle-non-interrupting');
+
+          openPopup(event);
+
+          var nonInterruptingEntry = queryEntry('toggle-non-interrupting');
+
+          // then
+          expect(event.businessObject.cancelActivity).to.be.false;
+          expect(domClasses(nonInterruptingEntry).has('active')).to.be.true;
+        }));
+
+      });
+
+    });
+
+
+    describe('integration', function() {
+
+      it('should toggle sequential -> undo to parallel', inject(function(elementRegistry, commandStack) {
+
+        // given
+        var task = elementRegistry.get('ParallelTask');
+
+        openPopup(task);
+
+        // when
+        triggerAction('toggle-sequential-mi');
+
+        commandStack.undo();
+
+        // then
+        const bo = getBusinessObject(task),
+              loopCharacteristics = bo.get('loopCharacteristics');
+
+        expect(is(loopCharacteristics, 'bpmn:MultiInstanceLoopCharacteristics')).to.be.true;
+        expect(loopCharacteristics.isSequential).to.be.false;
+      }));
+
+
+      it('should toggle parallel -> undo to parallel', inject(function(elementRegistry, commandStack) {
+
+        // given
+        var task = elementRegistry.get('ParallelTask');
+
+        openPopup(task);
+
+        // when
+        triggerAction('toggle-parallel-mi');
+
+        commandStack.undo();
+
+        // then
+        const bo = getBusinessObject(task),
+              loopCharacteristics = bo.get('loopCharacteristics');
+
+        expect(is(loopCharacteristics, 'bpmn:MultiInstanceLoopCharacteristics')).to.be.true;
+        expect(loopCharacteristics.isSequential).to.be.false;
+      }));
+
+
+      it('should toggle loop -> undo to parallel', inject(function(elementRegistry, commandStack) {
+
+        // given
+        var task = elementRegistry.get('ParallelTask');
+
+        openPopup(task);
+
+        // when
+        triggerAction('toggle-loop');
+
+        commandStack.undo();
+
+        // then
+        const bo = getBusinessObject(task),
+              loopCharacteristics = bo.get('loopCharacteristics');
+
+        expect(is(loopCharacteristics, 'bpmn:MultiInstanceLoopCharacteristics')).to.be.true;
+        expect(loopCharacteristics.isSequential).to.be.false;
+      }));
+    });
+
   });
 
 
@@ -786,7 +954,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
     beforeEach(bootstrapModeler(diagramXMLMarkers, { modules: testModules }));
 
-    it('should retain the loop characteristics', inject(function(bpmnReplace, elementRegistry) {
+    it('should retain the loop characteristics', inject(function(elementRegistry) {
 
       // given
       var task = elementRegistry.get('SequentialTask');
@@ -805,7 +973,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should retain the loop characteristics for call activites',
-      inject(function(bpmnReplace, elementRegistry) {
+      inject(function(elementRegistry) {
 
         // given
         var task = elementRegistry.get('SequentialTask');
@@ -825,7 +993,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should retain expanded status for sub processes',
-      inject(function(bpmnReplace, elementRegistry) {
+      inject(function(elementRegistry) {
 
         // given
         var subProcess = elementRegistry.get('SubProcess');
@@ -843,7 +1011,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should replace sub processes -> event sub process',
-      inject(function(bpmnReplace, elementRegistry) {
+      inject(function(elementRegistry) {
 
         // given
         var subProcess = elementRegistry.get('SubProcess');
@@ -861,7 +1029,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should replace event sub processes -> sub process',
-      inject(function(bpmnReplace, elementRegistry) {
+      inject(function(elementRegistry) {
 
         // given
         var eventSubProcess = elementRegistry.get('EventSubProcess');
@@ -879,7 +1047,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should retain the loop characteristics and the expanded status for transactions',
-      inject(function(bpmnReplace, elementRegistry) {
+      inject(function(elementRegistry) {
 
         // given
         var transaction = elementRegistry.get('Transaction');
@@ -897,12 +1065,16 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should not retain the loop characteristics morphing to an event sub process',
-      inject(function(bpmnReplace, elementRegistry, modeling) {
+      inject(function(bpmnFactory, elementRegistry, modeling) {
 
         // given
         var transaction = elementRegistry.get('Transaction');
 
-        modeling.updateProperties(transaction, { loopCharacteristics: { isparallel: true } });
+        modeling.updateProperties(transaction, {
+          loopCharacteristics: bpmnFactory.create('bpmn:MultiInstanceLoopCharacteristics', {
+            isParallel: true
+          })
+        });
 
         openPopup(transaction);
 
@@ -917,7 +1089,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
     it('should retain the expanded property morphing to an event sub processes',
-      inject(function(bpmnReplace, elementRegistry) {
+      inject(function(elementRegistry) {
 
         // given
         var transaction = elementRegistry.get('Transaction');
@@ -943,7 +1115,7 @@ describe('features/popup-menu - replace menu provider', function() {
       beforeEach(bootstrapModeler(diagramXMLReplace, { modules: testModules }));
 
       it('should contain all except the current one',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var startEvent = elementRegistry.get('StartEvent_1');
@@ -953,13 +1125,13 @@ describe('features/popup-menu - replace menu provider', function() {
 
           // then
           expect(queryEntry('replace-with-none-start')).to.be.null;
-          expect(queryEntries()).to.have.length(6);
+          expect(queryBodyEntries()).to.have.length(6);
         })
       );
 
 
       it('should contain all start events inside event sub process except the current one',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var startEvent = elementRegistry.get('StartEvent_3');
@@ -971,7 +1143,7 @@ describe('features/popup-menu - replace menu provider', function() {
           expect(queryEntry('replace-with-non-interrupting-message-start')).to.be.null;
           expect(queryEntry('replace-with-message-start')).to.exist;
 
-          expect(queryEntries()).to.have.length(11);
+          expect(queryBodyEntries()).to.have.length(11);
         })
       );
 
@@ -995,12 +1167,62 @@ describe('features/popup-menu - replace menu provider', function() {
           expect(queryEntry('replace-with-conditional-start')).to.exist;
           expect(queryEntry('replace-with-non-interrupting-conditional-start')).to.be.null;
 
-          expect(queryEntries()).to.have.length(11);
+          expect(queryBodyEntries()).to.have.length(11);
         })
       );
 
-      it('should contain only start event, end event and intermediate throw event inside sub process except the current one',
+
+      it('should include non-interrupting toggle for non interrupting start event',
+        inject(function(elementRegistry) {
+
+          // given
+          var startEvent = elementRegistry.get('StartEvent_3');
+
+          // when
+          openPopup(startEvent);
+
+          // then
+          expect(queryEntry('toggle-non-interrupting')).to.exist;
+        })
+      );
+
+
+      it('should include non-interrupting toggle for interrupting start event',
+        inject(function(elementRegistry) {
+
+          // given
+          var startEvent = elementRegistry.get('StartEvent_6');
+
+          // when
+          openPopup(startEvent);
+
+          // then
+          expect(queryEntry('toggle-non-interrupting')).to.exist;
+        })
+      );
+
+
+      it('should NOT include non-interrupting toggle for start events that must be interrupting',
         inject(function(bpmnReplace, elementRegistry) {
+
+          // given
+          var startEvent = elementRegistry.get('StartEvent_3');
+
+          var newElement = bpmnReplace.replaceElement(startEvent, {
+            type: 'bpmn:StartEvent'
+          });
+
+          // when
+          openPopup(newElement);
+
+          // then
+          expect(queryEntry('toggle-non-interrupting')).not.to.exist;
+        })
+      );
+
+
+      it('should contain only start event, end event and intermediate throw event inside sub process except the current one',
+        inject(function(elementRegistry) {
 
           // given
           var startEvent = elementRegistry.get('StartEvent_2');
@@ -1013,13 +1235,13 @@ describe('features/popup-menu - replace menu provider', function() {
           expect(queryEntry('replace-with-none-end')).to.exist;
           expect(queryEntry('replace-with-none-intermediate-throwing')).to.exist;
 
-          expect(queryEntries()).to.have.length(2);
+          expect(queryBodyEntries()).to.have.length(2);
         })
       );
 
 
       it('should contain all intermediate events except the current one',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var intermediateEvent = elementRegistry.get('IntermediateThrowEvent_1');
@@ -1030,13 +1252,13 @@ describe('features/popup-menu - replace menu provider', function() {
           // then
           expect(queryEntry('replace-with-none-intermediate-throw')).to.be.null;
 
-          expect(queryEntries()).to.have.length(12);
+          expect(queryBodyEntries()).to.have.length(12);
         })
       );
 
 
       it('should contain all end events except the current one',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var endEvent = elementRegistry.get('EndEvent_1');
@@ -1047,7 +1269,23 @@ describe('features/popup-menu - replace menu provider', function() {
           // then
           expect(queryEntry('replace-with-none-end')).to.be.null;
 
-          expect(queryEntries()).to.have.length(8);
+          expect(queryBodyEntries()).to.have.length(8);
+        })
+      );
+
+
+      it('should show corresponding "non-interrupting" event',
+        inject(function(elementRegistry) {
+
+          // given
+          var messageStartEvent = elementRegistry.get('StartEvent_6');
+
+          // when
+          openPopup(messageStartEvent);
+
+          // then
+          expect(queryEntry('replace-with-message-start')).to.be.null;
+          expect(queryEntry('replace-with-non-interrupting-message-start')).exist;
         })
       );
 
@@ -1073,7 +1311,7 @@ describe('features/popup-menu - replace menu provider', function() {
             openPopup(endEvent);
 
             // then
-            expect(queryEntries()).to.have.length(9);
+            expect(queryBodyEntries()).to.have.length(9);
 
             expect(queryEntry('replace-with-cancel-end')).to.exist;
           })
@@ -1090,7 +1328,7 @@ describe('features/popup-menu - replace menu provider', function() {
             openPopup(endEvent);
 
             // then
-            expect(queryEntries()).to.have.length(9);
+            expect(queryBodyEntries()).to.have.length(9);
             expect(queryEntry('replace-with-cancel-end')).to.be.null;
           })
         );
@@ -1106,7 +1344,7 @@ describe('features/popup-menu - replace menu provider', function() {
             openPopup(endEvent);
 
             // then
-            expect(queryEntries()).to.have.length(8);
+            expect(queryBodyEntries()).to.have.length(8);
 
             expect(queryEntry('replace-with-cancel-end')).to.be.null;
           })
@@ -1127,7 +1365,7 @@ describe('features/popup-menu - replace menu provider', function() {
             openPopup(boundaryEvent);
 
             // then
-            expect(queryEntries()).to.have.length(13);
+            expect(queryBodyEntries()).to.have.length(13);
 
             expect(queryEntry('replace-with-cancel-boundary')).to.exist;
           })
@@ -1144,7 +1382,7 @@ describe('features/popup-menu - replace menu provider', function() {
             openPopup(boundaryEvent);
 
             // then
-            expect(queryEntries()).to.have.length(12);
+            expect(queryBodyEntries()).to.have.length(12);
 
             expect(queryEntry('replace-with-cancel-boundary')).to.be.null;
           })
@@ -1161,7 +1399,7 @@ describe('features/popup-menu - replace menu provider', function() {
             openPopup(boundaryEvent);
 
             // then
-            expect(queryEntries()).to.have.length(12);
+            expect(queryBodyEntries()).to.have.length(12);
 
             expect(queryEntry('replace-with-cancel-boundary')).to.be.null;
           })
@@ -1177,7 +1415,7 @@ describe('features/popup-menu - replace menu provider', function() {
       beforeEach(bootstrapModeler(diagramXMLReplace, { modules: testModules }));
 
       it('should contain all boundary events (except for cancel and currently active) for an interrupting boundary event',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var boundaryEvent = elementRegistry.get('BoundaryEvent_1');
@@ -1188,13 +1426,13 @@ describe('features/popup-menu - replace menu provider', function() {
           // then
           expect(queryEntry('replace-with-conditional-intermediate-catch')).to.be.null;
           expect(queryEntry('replace-with-cancel-boundary')).to.be.null;
-          expect(queryEntries()).to.have.length(11);
+          expect(queryBodyEntries()).to.have.length(11);
         })
       );
 
 
       it('should contain all boundary events (except for cancel and currently active) for a non interrupting boundary event',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var boundaryEvent = elementRegistry.get('BoundaryEvent_2');
@@ -1205,13 +1443,13 @@ describe('features/popup-menu - replace menu provider', function() {
           // then
           expect(queryEntry('replace-with-non-interrupting-message-intermediate-catch')).to.be.null;
           expect(queryEntry('replace-with-cancel-boundary')).to.be.null;
-          expect(queryEntries()).to.have.length(11);
+          expect(queryBodyEntries()).to.have.length(11);
         })
       );
 
 
       it('should contain compensation boundary event',
-        inject(function(bpmnReplace, elementRegistry) {
+        inject(function(elementRegistry) {
 
           // given
           var boundaryEvent = elementRegistry.get('BoundaryEvent_1');
@@ -1245,7 +1483,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(sequenceFlow);
 
         // then
-        expect(queryEntries()).to.have.length(1);
+        expect(queryBodyEntries()).to.have.length(1);
       }));
 
 
@@ -1258,7 +1496,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(sequenceFlow);
 
         // then
-        expect(queryEntries()).to.have.length(2);
+        expect(queryBodyEntries()).to.have.length(2);
       }));
 
 
@@ -1271,7 +1509,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(sequenceFlow);
 
         // then
-        expect(queryEntries()).to.have.length(0);
+        expect(queryBodyEntries()).to.have.length(0);
       }));
 
     });
@@ -1389,7 +1627,7 @@ describe('features/popup-menu - replace menu provider', function() {
         // then
         expect(conditionalFlowEntry).to.exist;
 
-        expect(queryEntries()).to.have.length(2);
+        expect(queryBodyEntries()).to.have.length(2);
       }));
 
 
@@ -1402,7 +1640,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(sequenceFlow);
 
         // then
-        expect(queryEntries()).to.have.length(0);
+        expect(queryBodyEntries()).to.have.length(0);
       }));
 
     });
@@ -1477,7 +1715,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
         // then
         expect(emptyPoolLabel).to.exist;
-        expect(emptyPoolLabel.innerHTML).to.eql('Empty Pool (removes content)');
+        expect(emptyPoolLabel.textContent).to.eql('Empty pool/participant (removes content)');
       }));
 
 
@@ -1493,7 +1731,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
         // then
         expect(emptyPoolLabel).to.exist;
-        expect(emptyPoolLabel.innerHTML).to.eql('Empty Pool');
+        expect(emptyPoolLabel.textContent).to.eql('Empty pool/participant');
       }));
 
     });
@@ -1513,11 +1751,25 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(dataObjectReference);
 
         // then
-        expect(queryEntries()).to.have.length(2);
+        expect(queryBodyEntries()).to.have.length(1);
         expect(queryEntry('toggle-is-collection')).to.exist;
         expect(queryEntry('replace-with-data-store-reference')).to.exist;
         expect(queryEntry('replace-with-data-object-reference')).to.be.null;
       }));
+
+
+      it('should handle missing dataObjectRef', inject(function(elementRegistry) {
+
+        // given
+        var dataObjectReference = elementRegistry.get('DataObjectReference_NO_DataObject');
+
+        // when
+        openPopup(dataObjectReference);
+
+        // then
+        expect(queryEntry('toggle-is-collection')).not.to.exist;
+      }));
+
     });
 
 
@@ -1535,10 +1787,23 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(dataStoreReference);
 
         // then
-        expect(queryEntries()).to.have.length(1);
+        expect(queryBodyEntries()).to.have.length(1);
         expect(queryEntry('toggle-is-collection')).to.be.null;
         expect(queryEntry('replace-with-data-store-reference')).to.be.null;
         expect(queryEntry('replace-with-data-object-reference')).to.exist;
+      }));
+
+
+      it('should handle missing dataStoreRef', inject(function(elementRegistry) {
+
+        // given
+        var dataStoreReference = elementRegistry.get('DataStoreReference_NO_DataStore');
+
+        // when
+        openPopup(dataStoreReference);
+
+        // then
+        expect(queryEntry('toggle-is-collection')).to.be.null;
       }));
 
     });
@@ -1558,7 +1823,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(dataStoreReferenceWithinParticipant);
 
         // then
-        expect(queryEntries()).to.have.length(1);
+        expect(queryBodyEntries()).to.have.length(1);
         expect(queryEntry('replace-with-data-object-reference')).to.exist;
       }));
 
@@ -1572,12 +1837,32 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(dataStoreReferenceOutsideParticipant);
 
         // then
-        expect(queryEntries()).to.have.length(0);
+        expect(queryBodyEntries()).to.have.length(0);
         expect(queryEntry('replace-with-data-object-reference')).to.be.null;
       }));
 
     });
 
+  });
+
+
+  describe('a11y', function() {
+
+    beforeEach(bootstrapModeler(diagramXMLReplace, { modules: testModules }));
+
+
+    it('should report no violations', inject(async function(elementRegistry) {
+
+      // given
+      const startEvent = elementRegistry.get('StartEvent_1');
+
+      // when
+      openPopup(startEvent);
+
+      // then
+      const container = getMenuContainer();
+      await expectToBeAccessible(container);
+    }));
   });
 
 
@@ -1834,7 +2119,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
       [
-        'bpmn:Activity',
+        'bpmn:Task',
         'bpmn:EndEvent',
         'bpmn:IntermediateThrowEvent',
         'bpmn:IntermediateCatchEvent'
@@ -2133,7 +2418,7 @@ describe('features/popup-menu - replace menu provider', function() {
 
 
       [
-        'bpmn:Activity',
+        'bpmn:Task',
         'bpmn:EndEvent',
         'bpmn:IntermediateThrowEvent',
         'bpmn:IntermediateCatchEvent'
@@ -2372,7 +2657,7 @@ describe('features/popup-menu - replace menu provider', function() {
       openPopup(startEvent);
 
       // then
-      expect(queryEntries()).to.have.length.above(0);
+      expect(queryBodyEntries()).to.have.length.above(0);
     }));
 
 
@@ -2390,7 +2675,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(startEvent);
 
         // then
-        expect(queryEntries()).to.have.length.above(0);
+        expect(queryBodyEntries()).to.have.length.above(0);
       })
     );
 
@@ -2409,7 +2694,7 @@ describe('features/popup-menu - replace menu provider', function() {
         openPopup(startEvent);
 
         // then
-        expect(queryEntries()).to.have.length(0);
+        expect(queryBodyEntries()).to.have.length(0);
       })
     );
 
@@ -2470,15 +2755,15 @@ function openPopup(element, offset) {
 }
 
 function queryEntry(id) {
-  var container = getBpmnJS().get('canvas').getContainer();
+  var container = getMenuContainer();
 
   return domQuery('.djs-popup [data-id="' + id + '"]', container);
 }
 
-function queryEntries() {
-  var container = getBpmnJS().get('canvas').getContainer();
+function queryBodyEntries() {
+  var container = getMenuContainer();
 
-  return domQueryAll('.djs-popup .entry', container);
+  return domQueryAll('.djs-popup .djs-popup-body .entry', container);
 }
 
 function queryEntryLabel(id) {
@@ -2491,10 +2776,15 @@ function triggerAction(id) {
   var entry = queryEntry(id);
 
   if (!entry) {
-    throw new Error('entry "'+ id +'" not found in replace menu');
+    throw new Error('entry "' + id + '" not found in replace menu');
   }
 
   var popupMenu = getBpmnJS().get('popupMenu');
 
   return popupMenu.trigger(globalEvent(entry, { x: 0, y: 0 }));
+}
+
+function getMenuContainer() {
+  const popup = getBpmnJS().get('popupMenu');
+  return popup._current.container;
 }

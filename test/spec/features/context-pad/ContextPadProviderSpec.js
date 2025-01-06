@@ -26,6 +26,7 @@ import replaceMenuModule from 'lib/features/popup-menu';
 import createModule from 'diagram-js/lib/features/create';
 import customRulesModule from '../../../util/custom-rules';
 import autoPlaceModule from 'lib/features/auto-place';
+import appendMenuProvider from 'lib/features/popup-menu';
 
 
 describe('features - context-pad', function() {
@@ -36,7 +37,8 @@ describe('features - context-pad', function() {
     contextPadModule,
     replaceMenuModule,
     customRulesModule,
-    createModule
+    createModule,
+    appendMenuProvider
   ];
 
 
@@ -67,6 +69,20 @@ describe('features - context-pad', function() {
 
       // then
       expect(deleteAction(element)).to.exist;
+    }));
+
+
+    it('should add delete action to elements label by default', inject(function(elementRegistry, contextPad) {
+
+      // given
+      var element = elementRegistry.get('StartEvent_1');
+      var label = element.label;
+
+      // when
+      contextPad.open(label);
+
+      // then
+      expect(deleteAction(label)).to.exist;
     }));
 
 
@@ -124,7 +140,7 @@ describe('features - context-pad', function() {
       // then
       expect(function() {
         contextPad.open(element);
-      }).not.to.throw;
+      }).not.to.throw();
     }));
 
 
@@ -427,6 +443,34 @@ describe('features - context-pad', function() {
       })
     );
 
+
+    it('should append gateway with marker', inject(
+      function(dragging, contextPad, elementRegistry) {
+
+        // given
+        var task = elementRegistry.get('Task_1');
+
+        // when
+        contextPad.open(task);
+
+        contextPad.trigger('dragstart', padEvent('append.gateway'));
+
+        dragging.move(canvasEvent({ x: task.x, y: task.y }));
+        dragging.hover({ element: task });
+        dragging.move(canvasEvent({ x: task.x + task.width + 30, y: task.y }));
+
+        var context = dragging.context(),
+            elements = context.data.elements;
+
+        dragging.end();
+
+        // then
+        expect(elements).to.have.length(1);
+        expect(is(elements[0], 'bpmn:ExclusiveGateway')).to.be.true;
+        expect(elements[0].di.isMarkerVisible).to.be.true;
+      })
+    );
+
   });
 
 
@@ -438,18 +482,12 @@ describe('features - context-pad', function() {
       modules: testModules
     }));
 
-    var container;
-
-    beforeEach(function() {
-      container = TestContainer.get(this);
-    });
-
 
     it('should show popup menu in the correct position', inject(function(elementRegistry, contextPad) {
 
       // given
       var element = elementRegistry.get('StartEvent_1'),
-          padding = 5,
+          padding = { y: 6, x: 1 },
           padMenuRect,
           replaceMenuRect;
 
@@ -459,11 +497,11 @@ describe('features - context-pad', function() {
       contextPad.trigger('click', padEvent('replace'));
 
       padMenuRect = contextPad.getPad(element).html.getBoundingClientRect();
-      replaceMenuRect = domQuery('.bpmn-replace', container).getBoundingClientRect();
+      replaceMenuRect = getPopupMenu().getBoundingClientRect();
 
       // then
-      expect(replaceMenuRect.left).to.be.at.most(padMenuRect.left);
-      expect(replaceMenuRect.top).to.be.at.most(padMenuRect.bottom + padding);
+      expect(replaceMenuRect.left).to.be.at.most(padMenuRect.left + padding.x);
+      expect(replaceMenuRect.top).to.be.at.most(padMenuRect.bottom + padding.y);
     }));
 
 
@@ -514,12 +552,11 @@ describe('features - context-pad', function() {
     describe('create + <CTRL>', function() {
 
       it('should open replace', inject(
-        function(create, dragging, canvas, elementFactory) {
+        function(create, dragging, canvas, elementFactory, popupMenu) {
 
           // given
           var rootShape = canvas.getRootElement(),
-              startEvent = elementFactory.createShape({ type: 'bpmn:StartEvent' }),
-              replaceMenu;
+              startEvent = elementFactory.createShape({ type: 'bpmn:StartEvent' });
 
           // when
           create.start(canvasEvent({ x: 0, y: 0 }), startEvent);
@@ -530,10 +567,8 @@ describe('features - context-pad', function() {
 
           dragging.end(canvasEvent({ x: 75, y: 75 }, { ctrlKey: true, metaKey: true }));
 
-          replaceMenu = domQuery('.bpmn-replace', container);
-
           // then
-          expect(replaceMenu).to.exist;
+          expect(popupMenu.isOpen()).to.be.true;
         }
       ));
 
@@ -558,9 +593,8 @@ describe('features - context-pad', function() {
           dragging.end(canvasEvent({ x: 50, y: 65 }, { ctrlKey: true, metaKey: true }));
 
           // then
-          var replaceMenu = domQueryAll('[data-id$="-boundary"]', popupMenu._current.container);
-          expect(replaceMenu).to.exist;
-          expect(replaceMenu.length).to.eql(12);
+          var replaceMenuEntries = domQueryAll('[data-id$="-boundary"]', getPopupMenu());
+          expect(replaceMenuEntries).to.have.length(12);
         }
       ));
 
@@ -578,11 +612,11 @@ describe('features - context-pad', function() {
 
           dragging.move(canvasEvent({ x: 50, y: 50 }));
           dragging.hover({ element: rootShape });
-          dragging.move(canvasEvent({ x: 75, y: 75 }));
+          dragging.move(canvasEvent({ x: 300, y: 300 }));
 
-          dragging.end(canvasEvent({ x: 75, y: 75 }, { ctrlKey: true, metaKey: true }));
+          dragging.end(canvasEvent({ x: 300, y: 300 }, { ctrlKey: true, metaKey: true }));
 
-          replaceMenu = domQuery('.bpmn-replace', container);
+          replaceMenu = domQuery('.bpmn-replace', getPopupMenu());
 
           // then
           expect(replaceMenu).not.to.exist;
@@ -608,8 +642,7 @@ describe('features - context-pad', function() {
           dragging.end(canvasEvent({ x: 75, y: 75 }, { ctrlKey: true, metaKey: true }));
 
           // then
-          var replaceMenu = domQuery('.bpmn-replace', container);
-
+          var replaceMenu = getPopupMenu();
           expect(replaceMenu).not.to.exist;
         }
       ));
@@ -690,6 +723,59 @@ describe('features - context-pad', function() {
 
   });
 
+
+  describe('preview', function() {
+
+    var diagramXML = require('../../../fixtures/bpmn/simple.bpmn');
+
+    beforeEach(bootstrapModeler(diagramXML, {
+      modules: testModules.concat(autoPlaceModule)
+    }));
+
+
+    it('should preview append', inject(function(canvas, elementRegistry, contextPad) {
+
+      // given
+      var element = elementRegistry.get('Task_1');
+
+      contextPad.open(element);
+
+      // mock event
+      var event = padEvent('append.gateway');
+
+      // when
+      contextPad.trigger('hover', event);
+
+      // then
+      expect(canvas.getLayer('complex-preview')).to.exist;
+      expect(domQueryAll('.djs-dragger', canvas.getLayer('complex-preview'))).to.have.length(2);
+    }));
+
+
+    it('should remove append preview on close', inject(function(canvas, elementRegistry, contextPad) {
+
+      // given
+      var element = elementRegistry.get('Task_1');
+
+      contextPad.open(element);
+
+      // mock event
+      var event = padEvent('append.gateway');
+
+      contextPad.trigger('hover', event);
+
+      expect(canvas.getLayer('complex-preview')).to.exist;
+      expect(domQueryAll('.djs-dragger', canvas.getLayer('complex-preview'))).to.have.length(2);
+
+      // when
+      contextPad.close();
+
+      // then
+      expect(domQueryAll('.djs-dragger', canvas.getLayer('complex-preview'))).to.have.length(0);
+    }));
+
+  });
+
 });
 
 
@@ -700,9 +786,9 @@ function padEntry(element, name) {
 
 function padEvent(entry) {
 
-  return getBpmnJS().invoke(function(overlays) {
+  return getBpmnJS().invoke(function(canvas) {
 
-    var target = padEntry(overlays._overlayRoot, entry);
+    var target = padEntry(canvas.getContainer(), entry);
 
     return {
       target: target,
@@ -711,4 +797,11 @@ function padEvent(entry) {
       clientY: 100
     };
   });
+}
+
+
+function getPopupMenu() {
+  const popup = getBpmnJS().get('popupMenu');
+
+  return popup._current && domQuery('.djs-popup', popup._current.container);
 }
