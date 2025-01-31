@@ -79,6 +79,22 @@ describe('features/modeling - update label', function() {
   ));
 
 
+  it('should not create label on (sub)process plane', inject(
+    function(modeling, elementRegistry) {
+
+      // given
+      var SubProcess_1 = elementRegistry.get('Subprocess_1_plane');
+
+      // when
+      modeling.updateLabel(SubProcess_1, 'Cool new label');
+
+      // then
+      expect(SubProcess_1.businessObject.name).to.equal('Cool new label');
+      expect(SubProcess_1.di.get('label')).not.to.exist;
+    }
+  ));
+
+
   describe('should delete label', function() {
 
     it('when setting null', inject(
@@ -149,21 +165,49 @@ describe('features/modeling - update label', function() {
   ));
 
 
-  it('should change value of group', inject(function(modeling, elementRegistry) {
+  it('should update group label', inject(function(modeling, elementRegistry) {
 
     // given
-    var group_1 = elementRegistry.get('Group_1');
+    var group = elementRegistry.get('Group_1');
 
     // when
-    modeling.updateLabel(group_1, 'foo');
+    modeling.updateLabel(group, 'bar');
 
     // then
-    expect(group_1.businessObject.categoryValueRef.value).to.equal('foo');
-    expect(group_1.label).to.exist;
+    expect(group.businessObject.categoryValueRef.value).to.equal('bar');
+    expect(group.label).to.exist;
   }));
 
 
-  it('should propertly fire events.changed after event name change', inject(
+  it('should create group label', inject(function(modeling, elementRegistry) {
+
+    // given
+    var group = elementRegistry.get('Group_2');
+
+    // when
+    modeling.updateLabel(group, 'foo');
+
+    // then
+    expect(group.businessObject.categoryValueRef.value).to.equal('foo');
+    expect(group.label).to.exist;
+  }));
+
+
+  it('should not create group label on empty text', inject(function(modeling, elementRegistry) {
+
+    // given
+    var group = elementRegistry.get('Group_2');
+
+    // when
+    modeling.updateLabel(group, null);
+
+    // then
+    expect(group.businessObject.categoryValueRef).to.not.exist;
+    expect(group.label).to.not.exist;
+  }));
+
+
+  it('should properly fire events.changed after event name change', inject(
     function(modeling, elementRegistry, eventBus) {
 
       // given

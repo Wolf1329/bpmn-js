@@ -12,7 +12,10 @@ import {
   getExternalLabelMid
 } from 'lib/util/LabelUtil';
 
-import { getDi } from 'lib/util/ModelUtil';
+import {
+  getBusinessObject,
+  getDi
+} from 'lib/util/ModelUtil';
 
 import {
   assign,
@@ -25,7 +28,7 @@ import coreModule from 'lib/core';
 import gridSnappingModule from 'lib/features/grid-snapping';
 
 
-describe('behavior - LabelBehavior', function() {
+describe('features/modeling/behavior - LabelBehavior', function() {
 
   var diagramXML = require('./LabelBehavior.bpmn');
 
@@ -78,6 +81,107 @@ describe('behavior - LabelBehavior', function() {
       expect(startEvent.businessObject.name).to.equal('foo');
       expect(spy).to.have.been.called;
     }));
+
+
+    it('should remove label', inject(function(elementRegistry, modeling) {
+
+      // given
+      var event = elementRegistry.get('StartEvent_1');
+
+      // when
+      modeling.updateProperties(event, {
+        name: undefined
+      });
+
+      // then
+      var labelShape = event.label;
+
+      expect(labelShape).not.to.exist;
+      expect(getBusinessObject(event).get('name')).not.to.exist;
+    }));
+
+
+  });
+
+
+  describe('updating name property via `modeling.updateModdleProperties`', function() {
+
+    it('should create label', inject(function(elementRegistry, modeling) {
+
+      // given
+      var gateway = elementRegistry.get('ExclusiveGateway_1'),
+          bo = getBusinessObject(gateway);
+
+      // when
+      modeling.updateModdleProperties(gateway, bo, {
+        name: 'foo'
+      });
+
+      // then
+      var labelShape = gateway.label;
+
+      expect(labelShape).to.exist;
+      expect(gateway.businessObject.name).to.equal('foo');
+    }));
+
+
+    it('should remove label', inject(function(elementRegistry, modeling) {
+
+      // given
+      var event = elementRegistry.get('StartEvent_1'),
+          bo = getBusinessObject(event);
+
+      // when
+      modeling.updateModdleProperties(event, bo, {
+        name: undefined
+      });
+
+      // then
+      var labelShape = event.label;
+
+      expect(labelShape).not.to.exist;
+      expect(getBusinessObject(event).get('name')).not.to.exist;
+    }));
+
+
+    it('should NOT create label when message name is added', inject(
+      function(elementRegistry, modeling) {
+
+        // given
+        var messageEvent = elementRegistry.get('IntermediateCatchEvent_1'),
+            bo = getBusinessObject(messageEvent);
+
+        // when
+        modeling.updateModdleProperties(messageEvent, bo.eventDefinitions[0].messageRef, {
+          name: 'foo'
+        });
+
+        // then
+        var labelShape = messageEvent.label;
+
+        expect(labelShape).not.to.exist;
+      })
+    );
+
+
+    it('should NOT remove label when message name is removed', inject(
+      function(elementRegistry, modeling) {
+
+        // given
+        var messageEvent = elementRegistry.get('IntermediateCatchEvent_2'),
+            bo = getBusinessObject(messageEvent);
+
+        // when
+        modeling.updateModdleProperties(messageEvent, bo.eventDefinitions[0].messageRef, {
+          name: undefined
+        });
+
+        // then
+        var labelShape = messageEvent.label;
+
+        expect(labelShape).to.exist;
+      })
+    );
 
   });
 
@@ -267,8 +371,8 @@ describe('behavior - LabelBehavior', function() {
           expect(label).to.exist;
           expect(elementRegistry.get(label.id)).to.exist;
 
-          expect(label.x).to.within(298, 299);
-          expect(label.y).to.be.within(140, 141);
+          expect(label.x).to.closeTo(299, 1);
+          expect(label.y).to.be.closeTo(145, 1);
           expect(label.width).to.be.within(15, 18);
           expect(label.height).to.be.within(13, 15);
         }
@@ -406,7 +510,7 @@ describe('behavior - LabelBehavior', function() {
 
           // then
           expect(sequenceFlowConnection.label.x).to.be.closeTo(273, 1);
-          expect(sequenceFlowConnection.label.y).to.be.closeTo(178, 1);
+          expect(sequenceFlowConnection.label.y).to.be.closeTo(182, 1);
         }
       ));
 
@@ -738,57 +842,54 @@ describe('behavior - LabelBehavior', function() {
 });
 
 
-describe('behavior - LabelBehavior', function() {
+describe('features/modeling/behavior - LabelBehavior - copy/paste integration', function() {
 
-  describe('copy/paste integration', function() {
+  var diagramXML = require('./LabelBehavior.copyPaste.bpmn');
 
-    var diagramXML = require('./LabelBehavior.copyPaste.bpmn');
-
-    beforeEach(bootstrapModeler(diagramXML, {
-      modules: [
-        modelingModule,
-        coreModule,
-        gridSnappingModule
-      ]
-    }));
+  beforeEach(bootstrapModeler(diagramXML, {
+    modules: [
+      modelingModule,
+      coreModule,
+      gridSnappingModule
+    ]
+  }));
 
 
-    it('should skip adjustment during creation', inject(
-      function(elementRegistry, copyPaste, canvas, dragging) {
+  it('should skip adjustment during creation', inject(
+    function(elementRegistry, copyPaste, canvas, dragging) {
 
-        // given
-        var elements = [
-          elementRegistry.get('Source'),
-          elementRegistry.get('Target'),
-          elementRegistry.get('SequenceFlow'),
-          elementRegistry.get('SequenceFlow').label
-        ];
+      // given
+      var elements = [
+        elementRegistry.get('Source'),
+        elementRegistry.get('Target'),
+        elementRegistry.get('SequenceFlow'),
+        elementRegistry.get('SequenceFlow').label
+      ];
 
-        var rootElement = canvas.getRootElement();
+      var rootElement = canvas.getRootElement();
 
-        copyPaste.copy(elements);
+      copyPaste.copy(elements);
 
-        // when
-        var pastedElements = copyPaste.paste({
-          element: rootElement,
-          point: {
-            x: 700,
-            y: 300
-          }
-        });
+      // when
+      var pastedElements = copyPaste.paste({
+        element: rootElement,
+        point: {
+          x: 700,
+          y: 300
+        }
+      });
 
-        var label = pastedElements[3];
+      var label = pastedElements[3];
 
-        // then
-        expect(label).to.exist;
+      // then
+      expect(label).to.exist;
 
-        expect(label).to.have.position({ x: 681, y: 287 });
-      }
-    ));
-
-  });
+      expect(label).to.have.position({ x: 681, y: 287 });
+    }
+  ));
 
 });
+
 
 // helpers //////////
 
