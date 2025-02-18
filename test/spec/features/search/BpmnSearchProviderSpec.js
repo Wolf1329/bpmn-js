@@ -3,6 +3,10 @@ import {
   inject
 } from 'test/TestHelper';
 
+import {
+  pick
+} from 'min-dash';
+
 import coreModule from 'lib/core';
 import modelingModule from 'lib/features/modeling';
 import bpmnSearchModule from 'lib/features/search';
@@ -17,7 +21,7 @@ describe('features - BPMN search provider', function() {
   ];
 
 
-  describe(' - with collaboration as root - ', function() {
+  describe('collaboration', function() {
     var diagramXML = require('./bpmn-search-collaboration.bpmn');
 
     beforeEach(bootstrapViewer(diagramXML, { modules: testModules }));
@@ -34,10 +38,12 @@ describe('features - BPMN search provider', function() {
       // then
       expect(elements).to.have.length(0);
     }));
+
   });
 
 
-  describe(' - with process as root - ', function() {
+  describe('process', function() {
+
     var diagramXML = require('./bpmn-search.bpmn');
 
     beforeEach(bootstrapViewer(diagramXML, { modules: testModules }));
@@ -70,13 +76,13 @@ describe('features - BPMN search provider', function() {
       var elements = bpmnSearch.find(pattern);
 
       // then
-      expect(elements[0].primaryTokens).to.eql([
-        { normal: 'has matched ID' }
+      expectTokens(elements[0].primaryTokens, [
+        { value: 'has matched ID' }
       ]);
-      expect(elements[0].secondaryTokens).to.eql([
-        { normal: 'some_' },
-        { matched: 'DataStore' },
-        { normal: '_123456_id' }
+      expectTokens(elements[0].secondaryTokens, [
+        { value: 'some_' },
+        { value: 'DataStore', match: true },
+        { value: '_123456_id' }
       ]);
     }));
 
@@ -94,6 +100,21 @@ describe('features - BPMN search provider', function() {
     }));
 
 
+    it('should not return root element (collabsed subprocess)', inject(function(bpmnSearch, elementRegistry) {
+
+      // given
+      var subprocessShape = elementRegistry.get('collapsed');
+      var pattern = 'Collapsed';
+
+      // when
+      var elements = bpmnSearch.find(pattern);
+
+      // then
+      expect(elements).to.have.length(1);
+      expect(elements[0].element).to.eql(subprocessShape);
+    }));
+
+
     describe('should split result into matched and non matched tokens', function() {
 
       it('matched all', inject(function(bpmnSearch) {
@@ -105,8 +126,8 @@ describe('features - BPMN search provider', function() {
         var elements = bpmnSearch.find(pattern);
 
         // then
-        expect(elements[0].primaryTokens).to.eql([
-          { matched: 'all matched' }
+        expectTokens(elements[0].primaryTokens, [
+          { value: 'all matched', match: true }
         ]);
       }));
 
@@ -120,9 +141,9 @@ describe('features - BPMN search provider', function() {
         var elements = bpmnSearch.find(pattern);
 
         // then
-        expect(elements[0].primaryTokens).to.eql([
-          { matched: 'before' },
-          { normal: ' 321' }
+        expectTokens(elements[0].primaryTokens, [
+          { value: 'before', match: true },
+          { value: ' 321' }
         ]);
       }));
 
@@ -136,10 +157,10 @@ describe('features - BPMN search provider', function() {
         var elements = bpmnSearch.find(pattern);
 
         // then
-        expect(elements[0].primaryTokens).to.eql([
-          { normal: '123 ' },
-          { matched: 'middle' },
-          { normal: ' 321' }
+        expectTokens(elements[0].primaryTokens, [
+          { value: '123 ' },
+          { value: 'middle', match: true },
+          { value: ' 321' }
         ]);
       }));
 
@@ -153,16 +174,68 @@ describe('features - BPMN search provider', function() {
         var elements = bpmnSearch.find(pattern);
 
         // then
-        expect(elements[0].primaryTokens).to.eql([
-          { normal: '123 ' },
-          { matched: 'after' }
+        expectTokens(elements[0].primaryTokens, [
+          { value: '123 ' },
+          { value: 'after', match: true }
         ]);
       }));
 
     });
 
+  });
 
+
+  describe('sorting', function() {
+
+    var diagramXML = require('./bpmn-search-sorting.bpmn');
+
+    beforeEach(bootstrapViewer(diagramXML, { modules: testModules }));
+
+
+    it('should sort', inject(function(bpmnSearch) {
+
+      // given
+      var pattern = 'foo';
+
+      // when
+      var elements = bpmnSearch.find(pattern);
+
+      // then
+      expect(elements).length(6);
+      expect(elements[0].element.id).to.eql('foo_2');
+      expect(elements[1].element.id).to.eql('foo_3');
+      expect(elements[2].element.id).to.eql('bar');
+      expect(elements[3].element.id).to.eql('baz');
+      expect(elements[4].element.id).to.eql('foo_0');
+      expect(elements[5].element.id).to.eql('foo_1');
+    }));
+
+
+    it('should handle elements without label', inject(function(bpmnSearch) {
+
+      // given
+      var pattern = 'ass';
+
+      // when
+      var elements = bpmnSearch.find(pattern);
+
+      // then
+      expect(elements).length(2);
+      expect(elements[0].element.id).to.eql('Association_1');
+      expect(elements[1].element.id).to.eql('Association_2');
+    }));
 
   });
 
 });
+
+
+// helpers ///////////////
+
+function expectTokens(tokens, expectedTokens) {
+  const cleanTokens = tokens.map(
+    token => pick(token, [ 'value', 'match' ])
+  );
+
+  expect(cleanTokens).to.eql(expectedTokens);
+}

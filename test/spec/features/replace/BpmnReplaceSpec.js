@@ -28,6 +28,8 @@ import {
   hasErrorEventDefinition
 } from 'lib/util/DiUtil';
 
+import { getMid } from 'diagram-js/lib/layout/LayoutUtil';
+
 
 describe('features/replace - bpmn replace', function() {
 
@@ -106,6 +108,27 @@ describe('features/replace - bpmn replace', function() {
 
       expect(newElement).to.exist;
       expect(is(businessObject, 'bpmn:InclusiveGateway')).to.be.true;
+      expect(newElement.di.isMarkerVisible).to.not.exist;
+    }));
+
+
+    it('gateway and set marker', inject(function(elementRegistry, bpmnReplace) {
+
+      // given
+      var gateway = elementRegistry.get('ComplexGateway_1');
+      var newElementData = {
+        type: 'bpmn:ExclusiveGateway'
+      };
+
+      // when
+      var newElement = bpmnReplace.replaceElement(gateway, newElementData);
+
+      // then
+      var businessObject = newElement.businessObject;
+
+      expect(newElement).to.exist;
+      expect(is(businessObject, 'bpmn:ExclusiveGateway')).to.be.true;
+      expect(newElement.di.isMarkerVisible).to.be.true;
     }));
 
 
@@ -176,10 +199,11 @@ describe('features/replace - bpmn replace', function() {
               boundaryBo = boundaryEvent.businessObject,
               newElementData = {
                 type: 'bpmn:BoundaryEvent',
-                eventDefinitionType: 'bpmn:TimerEventDefinition'
+                eventDefinitionType: 'bpmn:TimerEventDefinition',
+                cancelActivity: true
               };
 
-          var eventDefinitions = boundaryBo.eventDefinitions.slice();
+          var eventDefinitions = boundaryBo.get('eventDefinitions').slice();
 
           // when
           var newElement = bpmnReplace.replaceElement(boundaryEvent, newElementData);
@@ -190,7 +214,7 @@ describe('features/replace - bpmn replace', function() {
 
           expect(is(newBo, 'bpmn:BoundaryEvent')).to.be.true;
 
-          expect(newBo.eventDefinitions).to.jsonEqual(eventDefinitions, skipId);
+          expect(newBo.get('eventDefinitions')).to.jsonEqual(eventDefinitions, skipId);
 
           expect(newBo.cancelActivity).to.be.true;
         })
@@ -209,7 +233,7 @@ describe('features/replace - bpmn replace', function() {
                 cancelActivity: false
               };
 
-          var eventDefinitions = boundaryBo.eventDefinitions.slice();
+          var eventDefinitions = boundaryBo.get('eventDefinitions').slice();
 
           // when
           var newElement = bpmnReplace.replaceElement(boundaryEvent, newElementData);
@@ -220,7 +244,7 @@ describe('features/replace - bpmn replace', function() {
 
           expect(is(newBo, 'bpmn:BoundaryEvent')).to.be.true;
 
-          expect(newBo.eventDefinitions).to.jsonEqual(eventDefinitions, skipId);
+          expect(newBo.get('eventDefinitions')).to.jsonEqual(eventDefinitions, skipId);
 
           expect(newBo.cancelActivity).to.be.false;
         })
@@ -242,7 +266,7 @@ describe('features/replace - bpmn replace', function() {
           var newElement = bpmnReplace.replaceElement(boundaryEvent, newElementData);
 
           var newBo = newElement.businessObject;
-          var newEventDefinitions = newBo.eventDefinitions;
+          var newEventDefinitions = newBo.get('eventDefinitions');
           var newEventDefinition = newEventDefinitions[0];
 
           // then
@@ -271,7 +295,7 @@ describe('features/replace - bpmn replace', function() {
           var newElement = bpmnReplace.replaceElement(boundaryEvent, newElementData);
 
           var newBo = newElement.businessObject;
-          var newEventDefinitions = newBo.eventDefinitions;
+          var newEventDefinitions = newBo.get('eventDefinitions');
           var newEventDefinition = newEventDefinitions[0];
 
           // then
@@ -416,6 +440,7 @@ describe('features/replace - bpmn replace', function() {
       // then
       expect(isExpanded(newShape)).to.be.false; // collapsed
       expect(newShape.children).to.be.empty;
+      expect(newShape.di.isHorizontal).to.be.true;
 
       expect(newShape).to.have.bounds(collapsedBounds);
 
@@ -442,6 +467,72 @@ describe('features/replace - bpmn replace', function() {
       // then
       expect(isExpanded(newShape)).to.be.true; // expanded
       expect(newShape.children).to.be.empty;
+      expect(newShape.di.isHorizontal).to.be.true;
+
+      expect(newShape).to.have.bounds(expandedBounds);
+    }));
+
+  });
+
+
+  describe('should replace in vertical collaboration', function() {
+
+    var diagramXML = require('./BpmnReplace.collaboration.vertical.bpmn');
+
+    beforeEach(bootstrapModeler(diagramXML, {
+      modules: testModules,
+      moddleExtensions: {
+        camunda: camundaPackage
+      }
+    }));
+
+
+    it('expanded with collapsed pool', inject(function(elementRegistry, bpmnReplace) {
+
+      // given
+      var shape = elementRegistry.get('V_Participant_1');
+
+      var messageFlow = elementRegistry.get('V_MessageFlow_B_to_A');
+
+      var collapsedBounds = assign({}, getBounds(shape), { width: 60 });
+
+      // when
+      var newShape = bpmnReplace.replaceElement(shape, {
+        type: 'bpmn:Participant',
+        isExpanded: false
+      });
+
+      // then
+      expect(isExpanded(newShape)).to.be.false; // collapsed
+      expect(newShape.children).to.be.empty;
+      expect(newShape.di.isHorizontal).to.be.false;
+
+      expect(newShape).to.have.bounds(collapsedBounds);
+
+      expect(messageFlow).to.have.waypoints([
+        { x: 436, y: 368 },
+        { x: newShape.x + collapsedBounds.width, y: 368 }
+      ]);
+    }));
+
+
+    it('collapsed with expanded pool', inject(function(elementRegistry, bpmnReplace) {
+
+      // given
+      var shape = elementRegistry.get('V_Participant_2');
+
+      var expandedBounds = assign({}, getBounds(shape), { width: 250 });
+
+      // when
+      var newShape = bpmnReplace.replaceElement(shape, {
+        type: 'bpmn:Participant',
+        isExpanded: true
+      });
+
+      // then
+      expect(isExpanded(newShape)).to.be.true; // expanded
+      expect(newShape.children).to.be.empty;
+      expect(newShape.di.isHorizontal).to.be.false;
 
       expect(newShape).to.have.bounds(expandedBounds);
     }));
@@ -478,6 +569,40 @@ describe('features/replace - bpmn replace', function() {
 
       expect(elementRegistry.get('MessageFlow_1')).to.exist;
       expect(elementRegistry.get('MessageFlow_2')).to.exist;
+    }));
+
+  });
+
+
+  describe('should collapse vertical pool, reconnecting message flows', function() {
+
+    var diagramXML = require('./BpmnReplace.poolMessageFlows.vertical.bpmn');
+
+    beforeEach(bootstrapModeler(diagramXML, {
+      modules: testModules,
+      moddleExtensions: {
+        camunda: camundaPackage
+      }
+    }));
+
+
+    it('expanded with collapsed pool', inject(function(elementRegistry, bpmnReplace) {
+
+      // given
+      var shape = elementRegistry.get('V_Participant_1');
+
+      // when
+      var newShape = bpmnReplace.replaceElement(shape, {
+        type: 'bpmn:Participant',
+        isExpanded: false
+      });
+
+      // then
+      expect(isExpanded(newShape)).to.be.false; // collapsed
+      expect(newShape.children).to.be.empty;
+
+      expect(elementRegistry.get('V_MessageFlow_1')).to.exist;
+      expect(elementRegistry.get('V_MessageFlow_2')).to.exist;
     }));
 
   });
@@ -574,6 +699,32 @@ describe('features/replace - bpmn replace', function() {
       expect(newElement.label.x).to.equal(label.x);
       expect(newElement.label.y).to.equal(label.y);
     }));
+
+
+    it('should assign default size when replacing task with expanded sub process', inject(
+      function(elementRegistry, bpmnReplace) {
+
+        // given
+        var task = elementRegistry.get('Task_1');
+
+        var mid = getMid(task);
+
+        var newElementData = {
+          type: 'bpmn:SubProcess',
+          isExpanded: true
+        };
+
+        // when
+        var newElement = bpmnReplace.replaceElement(task, newElementData);
+
+        // then
+        expect(newElement).to.exist;
+        expect(is(newElement, 'bpmn:SubProcess')).to.be.true;
+        expect(getMid(newElement)).to.eql(mid);
+        expect(newElement.width).to.equal(350);
+        expect(newElement.height).to.equal(200);
+      }
+    ));
 
   });
 
@@ -1176,6 +1327,7 @@ describe('features/replace - bpmn replace', function() {
         expect(is(newElement, 'bpmn:CallActivity')).to.be.true;
       }));
 
+
     it('should drop event type from start event after moving it into sub process',
       inject(function(bpmnReplace, elementRegistry, modeling) {
 
@@ -1184,16 +1336,17 @@ describe('features/replace - bpmn replace', function() {
             subProcess = elementRegistry.get('SubProcess_2');
 
         // when
-        modeling.moveElements([startEvent], { x: 100, y: 0 }, subProcess);
+        modeling.moveElements([ startEvent ], { x: 100, y: 0 }, subProcess);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === subProcess;
         })[0];
 
         // then
-        expect(startEventAfter.businessObject.eventDefinitions).not.to.exist;
+        expect(startEventAfter.businessObject.get('eventDefinitions')).is.empty;
       })
     );
+
 
     it('should not drop event type from start event after moving it into event sub process',
       inject(function(bpmnReplace, elementRegistry, modeling) {
@@ -1203,14 +1356,14 @@ describe('features/replace - bpmn replace', function() {
             subProcess = elementRegistry.get('EventSubProcess_2');
 
         // when
-        modeling.moveElements([startEvent], { x: -100, y: 0 }, subProcess);
+        modeling.moveElements([ startEvent ], { x: -100, y: 0 }, subProcess);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === subProcess;
         })[0];
 
         // then
-        expect(startEventAfter.businessObject.eventDefinitions[0].$type).to.equal('bpmn:MessageEventDefinition');
+        expect(startEventAfter.businessObject.get('eventDefinitions')[0].$type).to.equal('bpmn:MessageEventDefinition');
       })
     );
 
@@ -1346,7 +1499,7 @@ describe('features/replace - bpmn replace', function() {
             root = elementRegistry.get('Process_1');
 
         // when
-        modeling.moveElements([startEvent], { x: 0, y: 200 }, root);
+        modeling.moveElements([ startEvent ], { x: 0, y: 200 }, root);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === root;
@@ -1368,7 +1521,7 @@ describe('features/replace - bpmn replace', function() {
             subProcess = elementRegistry.get('SubProcess_1');
 
         // when
-        modeling.moveElements([startEvent], { x: 260, y: 60 }, subProcess);
+        modeling.moveElements([ startEvent ], { x: 260, y: 60 }, subProcess);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === subProcess;
@@ -1396,7 +1549,7 @@ describe('features/replace - bpmn replace', function() {
         });
 
         // when
-        modeling.moveElements([startEvent], { x: 260, y: 60 }, eventSubProcess);
+        modeling.moveElements([ startEvent ], { x: 260, y: 60 }, eventSubProcess);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === eventSubProcess && element.type !== 'label';
@@ -1420,7 +1573,7 @@ describe('features/replace - bpmn replace', function() {
         var interruptingStartEvent = bpmnReplace.replaceElement(startEvent, { type: 'bpmn:StartEvent' });
 
         // when
-        modeling.moveElements([interruptingStartEvent], { x: 0, y: 200 }, root);
+        modeling.moveElements([ interruptingStartEvent ], { x: 0, y: 200 }, root);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent')
@@ -1464,7 +1617,7 @@ describe('features/replace - bpmn replace', function() {
             startEvent = elementRegistry.get('StartEvent_2');
 
         // when
-        modeling.moveElements([eventSubProcess], { x: 20, y: 30 });
+        modeling.moveElements([ eventSubProcess ], { x: 20, y: 30 });
 
         // start event after moving parent
         var startEventAfter = elementRegistry.filter(function(element) {
@@ -1485,7 +1638,7 @@ describe('features/replace - bpmn replace', function() {
             root = elementRegistry.get('Process_1');
 
         // when
-        modeling.moveElements([startEvent], { x: 0, y: 200 }, root);
+        modeling.moveElements([ startEvent ], { x: 0, y: 200 }, root);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === root;
@@ -1505,7 +1658,7 @@ describe('features/replace - bpmn replace', function() {
             subProcess = elementRegistry.get('SubProcess_1');
 
         // when
-        modeling.moveElements([startEvent], { x: 260, y: 60 }, subProcess);
+        modeling.moveElements([ startEvent ], { x: 260, y: 60 }, subProcess);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === subProcess;
@@ -1532,7 +1685,7 @@ describe('features/replace - bpmn replace', function() {
         });
 
         // when
-        modeling.moveElements([startEvent], { x: 260, y: 60 }, eventSubProcess);
+        modeling.moveElements([ startEvent ], { x: 260, y: 60 }, eventSubProcess);
 
         var startEventAfter = elementRegistry.filter(function(element) {
           return is(element, 'bpmn:StartEvent') && element.parent === eventSubProcess && element.type !== 'label';
@@ -1573,7 +1726,7 @@ describe('features/replace - bpmn replace', function() {
             startEvent = elementRegistry.get('StartEvent_3');
 
         // when
-        modeling.moveElements([eventSubProcess], { x: 20, y: 30 });
+        modeling.moveElements([ eventSubProcess ], { x: 20, y: 30 });
 
         // start event after moving parent
         var startEventAfter = elementRegistry.filter(function(element) {
@@ -1585,6 +1738,22 @@ describe('features/replace - bpmn replace', function() {
         expect(startEventAfter.parent).to.eql(eventSubProcess);
       })
     );
+
+
+    it('should remove `isForCompensation` when replacing sub process', inject(function(elementRegistry, bpmnReplace) {
+
+      // given
+      var compensationSubProcess = elementRegistry.get('SubProcess_4');
+
+      // when
+      var subProcess = bpmnReplace.replaceElement(
+        compensationSubProcess,
+        { type: 'bpmn:SubProcess', triggeredByEvent: true }
+      );
+
+      // then
+      expect(subProcess.businessObject.isForCompensation).to.be.false;
+    }));
 
   });
 
@@ -1612,7 +1781,7 @@ describe('features/replace - bpmn replace', function() {
           eventDefinitionType: 'bpmn:MessageEventDefinition'
         });
 
-        var parent = messageEvent.businessObject.eventDefinitions[0].$parent;
+        var parent = messageEvent.businessObject.get('eventDefinitions')[0].$parent;
 
         expect(parent).to.exist;
         expect(parent).to.equal(messageEvent.businessObject);
@@ -1632,7 +1801,7 @@ describe('features/replace - bpmn replace', function() {
           eventDefinitionType: 'bpmn:ConditionalEventDefinition'
         });
 
-        var definition = messageEvent.businessObject.eventDefinitions[0];
+        var definition = messageEvent.businessObject.get('eventDefinitions')[0];
 
         // then
         expect(definition.condition).to.exist;
