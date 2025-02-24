@@ -5,6 +5,7 @@ import {
 } from 'test/TestHelper';
 
 import {
+  attr as svgAttr,
   create as svgCreate
 } from 'tiny-svg';
 
@@ -13,14 +14,30 @@ import rendererModule from 'lib/draw';
 import modelingModule from 'lib/features/modeling';
 
 import {
-  query as domQuery
+  query as domQuery,
+  queryAll as domQueryAll
 } from 'min-dom';
+
+import { getVisual } from 'diagram-js/lib/util/GraphicsUtil';
 
 import { isAny } from 'lib/features/modeling/util/ModelingUtil';
 
+import { isExpanded } from 'lib/util/DiUtil';
+
+import { isPlane } from 'lib/util/DrilldownUtil';
+
 import {
-  getDi
+  getDi,
+  black,
+  white
 } from 'lib/draw/BpmnRenderUtil';
+
+import customRendererModule from './custom-renderer';
+
+
+/**
+ * @typedef {import('../../../lib/model/Types').Element} Element
+ */
 
 function checkErrors(err, warnings) {
   expect(warnings).to.be.empty;
@@ -197,6 +214,15 @@ describe('draw - bpmn renderer', function() {
   });
 
 
+  it('should render vertical pools', function() {
+    var xml = require('../../fixtures/bpmn/draw/vertical-pools.bpmn');
+    return bootstrapViewer(xml).call(this).then(function(result) {
+
+      checkErrors(result.error, result.warnings);
+    });
+  });
+
+
   it('should render pool collection marker', function() {
     var xml = require('../../fixtures/bpmn/draw/pools-with-collection-marker.bpmn');
     return bootstrapViewer(xml).call(this).then(function(result) {
@@ -333,7 +359,7 @@ describe('draw - bpmn renderer', function() {
         var svg = canvas._svg;
         var markers = svg.querySelectorAll('marker');
 
-        expect(markers[0].id).to.match(/^sequenceflow-end-white-hsl_225_10_15_-[A-Za-z0-9]+$/);
+        expect(markers[0].id).to.match(/^marker-[A-Za-z0-9]+$/);
       })();
     });
   });
@@ -349,17 +375,26 @@ describe('draw - bpmn renderer', function() {
       expect(err).not.to.exist;
 
       inject(function(canvas) {
-        var svg = canvas._svg,
-            markers = svg.querySelectorAll('marker');
 
-        expect(markers).to.have.length(7);
-        expect(markers[0].id).to.match(/^sequenceflow-end-rgb_255_224_178_-rgb_251_140_0_-[A-Za-z0-9]{25}$/);
-        expect(markers[1].id).to.match(/^sequenceflow-end-yellow-blue-[A-Za-z0-9]{25}$/);
-        expect(markers[2].id).to.match(/^sequenceflow-end-white-_FB8C00-[A-Za-z0-9]{25}$/);
-        expect(markers[3].id).to.match(/^sequenceflow-end-white-rgba_255_0_0_0_9_-[A-Za-z0-9]{25}$/);
-        expect(markers[4].id).to.match(/^association-end-_FFE0B2-_FB8C00-[A-Za-z0-9]{25}$/);
-        expect(markers[5].id).to.match(/^messageflow-end-_FFE0B2-_FB8C00-[A-Za-z0-9]{25}$/);
-        expect(markers[6].id).to.match(/^messageflow-start-_FFE0B2-_FB8C00-[A-Za-z0-9]{25}$/);
+        [
+          [ 'SequenceFlow_1jrsqqc' , 'blue' , 'blue' ],
+          [ 'SequenceFlow_0h9s0mp' , 'rgba(255, 0, 0, 0.9)' ],
+          [ 'SequenceFlow_0pqo7zt' , 'rgb(251, 140, 0)' , 'rgb(251, 140, 0)' ],
+          [ 'SequenceFlow_1qt82pt' , 'blue' , 'blue' ],
+          [ 'SequenceFlow_17ohrlh' , 'rgb(251, 140, 0)' , 'rgb(251, 140, 0)' ],
+          [ 'MessageFlow_11bysyp' , 'rgb(251, 140, 0)' , 'rgb(255, 224, 178)' ],
+          [ 'MessageFlow_1qyovto' , 'rgb(251, 140, 0)' , 'rgb(255, 224, 178)' ],
+          [ 'DataInputAssociation_1ncouqr' , 'rgb(251, 140, 0)' , 'none' ],
+          [ 'DataOutputAssociation_1i89wkc' , 'rgb(251, 140, 0)' , 'none' ]
+        ].forEach(([ id, stroke, fill ]) => {
+          var svg = canvas._svg,
+              markerPath = svg.querySelector(`[data-element-id="${id}"] marker path`);
+
+          expect(markerPath).to.exist;
+
+          stroke && expect(markerPath.style.stroke).to.eql(stroke);
+          fill && expect(markerPath.style.fill).to.eql(fill);
+        });
       })();
     });
   });
@@ -375,14 +410,22 @@ describe('draw - bpmn renderer', function() {
       expect(err).not.to.exist;
 
       inject(function(canvas) {
-        var svg = canvas._svg,
-            markers = svg.querySelectorAll('marker');
 
-        expect(markers).to.have.length(4);
-        expect(markers[0].id).to.match(/^association-end-rgb_23_100_344_-rgb_23_100_344_-[A-Za-z0-9]{25}$/);
-        expect(markers[1].id).to.match(/^association-end-_E1BEE7-_8E24AA-[A-Za-z0-9]{25}$/);
-        expect(markers[2].id).to.match(/^messageflow-end-rgb_23_100_344_-rgb_23_100_344_-[A-Za-z0-9]{25}$/);
-        expect(markers[3].id).to.match(/^messageflow-start-rgb_23_100_344_-rgb_23_100_344_-[A-Za-z0-9]{25}$/);
+        [
+          [ 'MessageFlow_1facuin', 'rgb(23, 100, 255)', 'rgb(23, 100, 255)' ],
+          [ 'MessageFlow_1vmbq3n', 'rgb(23, 100, 255)', 'rgb(23, 100, 255)' ],
+          [ 'DataInputAssociation', 'rgb(23, 100, 255)', 'none' ],
+          [ 'DataOutputAssociation_0ixhole', 'rgb(142, 36, 170)', 'none' ],
+        ].forEach(([ id, stroke, fill ]) => {
+          var svg = canvas._svg,
+              markerPath = svg.querySelector(`[data-element-id="${id}"] marker path`);
+
+          expect(markerPath).to.exist;
+
+          stroke && expect(markerPath.style.stroke).to.eql(stroke);
+          fill && expect(markerPath.style.fill).to.eql(fill);
+
+        });
       })();
     });
   });
@@ -484,49 +527,19 @@ describe('draw - bpmn renderer', function() {
         }
       }));
 
-      // TODO(philippfromme): remove once we drop PhantomJS
-      /**
-       * Ensure alpha channel of RGB (rgba) color has one decimal point.
-       *
-       * @param {string} color
-       *
-       * @return {string}
-       */
-      function fixRgba(color) {
-        if (color.indexOf('rgba') !== -1) {
-          return [
-            'rgba(',
-            color
-              .replace(/rgba\(|\)/g, '')
-              .split(',')
-              .map(function(string) {
-                if (string.indexOf('.') !== -1) {
-                  return parseFloat(string).toFixed(1);
-                }
-
-                return parseInt(string);
-              })
-              .join(', '),
-            ')'
-          ].join('');
-        }
-
-        return color;
-      }
-
       function expectFillColor(element, color) {
-        expect(expectedColors(color)).to.include(fixRgba(element.style.fill));
+        expect(expectedColors(color)).to.include(element.style.fill);
       }
 
       function expectStrokeColor(element, color) {
-        expect(expectedColors(color)).to.include(fixRgba(element.style.stroke));
+        expect(expectedColors(color)).to.include(element.style.stroke);
       }
 
       /**
        * Expect colors depending on element type.
        *
-       * @param {djs.model.base} element - Element.
-       * @param {SVG} gfx - Graphics of element.
+       * @param {Element} element - Element.
+       * @param {SVGElement} gfx - Graphics of element.
        * @param {string} fillColor - Fill color to expect.
        * @param {string} strokeColor - Stroke color to expect.
        */
@@ -583,6 +596,34 @@ describe('draw - bpmn renderer', function() {
           expectColors(element, gfx, fillColor, strokeColor, labelColor);
         });
       }));
+
+
+      describe('events', function() {
+
+        const diagramXML = require('../../fixtures/bpmn/draw/events.bpmn');
+
+        beforeEach(bootstrapModeler(diagramXML, {
+          bpmnRenderer: {
+            defaultFillColor: defaultFillColor,
+            defaultStrokeColor: defaultStrokeColor,
+            defaultLabelColor: defaultLabelColor
+          }
+        }));
+
+        it('should not fill multiple parallel events', inject(function(elementRegistry) {
+
+          // given
+          var parallelMultiple = elementRegistry.get('StartEvent_multiple_parallel_1');
+          var visual = getVisual(elementRegistry.getGraphics(parallelMultiple));
+          var path = domQuery('path', visual);
+
+          // then
+          expectFillColor(path, defaultFillColor);
+          expectStrokeColor(path, defaultStrokeColor);
+
+        }));
+
+      });
 
     });
 
@@ -682,4 +723,181 @@ describe('draw - bpmn renderer', function() {
 
   });
 
+
+  describe('attrs', function() {
+
+    describe('colors', function() {
+
+      const diagramXML = require('../../fixtures/bpmn/kitchen-sink.bpmn');
+
+      class CustomColors {
+        constructor(eventBus) {
+          eventBus.on([ 'render.shape', 'render.connection' ], 100000, (_, context) => {
+            context.attrs = {
+              fill: 'yellow',
+              fillOpacity: 0.1, // should be ignored
+              stroke: 'blue',
+              strokeDasharray: '0, 10', // should be ignored
+              strokeWidth: 10 // should be ignored
+            };
+          });
+        }
+      }
+
+      CustomColors.$inject = [ 'eventBus' ];
+
+      beforeEach(bootstrapModeler(diagramXML, {
+        bpmnRenderer: {
+          defaultFillColor: 'cyan',
+          defaultStrokeColor: 'red'
+        },
+        additionalModules: [
+          {
+            __init__: [ 'customColors' ],
+            customColors: [ 'type', CustomColors ]
+          }
+        ]
+      }));
+
+
+      it('should override colors', inject(function(canvas) {
+
+        // then
+        var container = canvas.getContainer();
+
+        // expect fill and stroke overridden
+        domQueryAll('.djs-visual *', container).forEach(element => {
+          expect(svgAttr(element, 'fill')).not.to.equal('cyan');
+          expect(svgAttr(element, 'fill')).not.to.equal(white);
+          expect(svgAttr(element, 'stroke')).not.to.equal('red');
+          expect(svgAttr(element, 'stroke')).not.to.equal(black);
+        });
+
+        // expect all others not overridden
+        domQueryAll('.djs-visual *', container).forEach(element => {
+          expect(svgAttr(element, 'stroke-dasharray')).not.to.equal('0, 9000');
+          expect(svgAttr(element, 'stroke-width')).not.to.equal('9000');
+        });
+      }));
+
+    });
+
+
+    describe('bounds', function() {
+
+      const diagramXML = require('../../fixtures/bpmn/kitchen-sink.bpmn');
+
+      class CustomBounds {
+        constructor(eventBus) {
+          eventBus.on('render.shape', 100000, (_, context) => {
+            context.attrs = {
+              width: 200,
+              height: 100,
+              fillOpacity: 0.1, // should be ignored
+              strokeDasharray: '0, 9000', // should be ignored
+              strokeWidth: 9000 // should be ignored
+            };
+          });
+        }
+      }
+
+      CustomBounds.$inject = [ 'eventBus' ];
+
+      beforeEach(bootstrapModeler(diagramXML, {
+        additionalModules: [
+          {
+            __init__: [ 'customBounds' ],
+            customBounds: [ 'type', CustomBounds ]
+          }
+        ]
+      }));
+
+
+      it('should override bounds', inject(function(canvas, elementRegistry) {
+
+        // then
+        var container = canvas.getContainer();
+
+        // expect width and height overridden
+        elementRegistry.filter(element => {
+          return isAny(element, [
+            'bpmn:AdHocSubProcess',
+            'bpmn:Group',
+            'bpmn:Lane',
+            'bpmn:Participant',
+            'bpmn:SubProcess',
+            'bpmn:TextAnnotation',
+            'bpmn:Transaction'
+          ]);
+        }).forEach(element => {
+          if (isPlane(element)) {
+            return;
+          }
+
+          var visual = getVisual(elementRegistry.getGraphics(element));
+
+          var rect = domQuery('rect', visual);
+
+          if (rect) {
+
+            if (isCollapsedSubProcess(element)) {
+              expect(svgAttr(rect, 'width')).to.equal('100');
+              expect(svgAttr(rect, 'height')).to.equal('80');
+            } else {
+              expect(svgAttr(rect, 'width')).to.equal('200');
+              expect(svgAttr(rect, 'height')).to.equal('100');
+            }
+          }
+        });
+
+        // expect all others not overridden
+        domQueryAll('.djs-visual *', container).forEach(element => {
+          expect(svgAttr(element, 'stroke-dasharray')).not.to.equal('0, 9000');
+          expect(svgAttr(element, 'stroke-width')).not.to.equal('9000');
+        });
+      }));
+    });
+
+  });
+
+
+  describe('custom icons', function() {
+
+    var xml = require('./BpmnRenderer.no-event-icons.bpmn');
+
+    beforeEach(bootstrapViewer(xml, {
+      additionalModules: [ customRendererModule ]
+    }));
+
+
+    it('should render blank', inject(function(elementRegistry) {
+
+      // given
+      var events = [
+        'START_EVENT',
+        'THROW_EVENT',
+        'CATCH_EVENT',
+        'END_EVENT',
+        'BOUNDARY_EVENT'
+      ];
+
+      for (var elementId of events) {
+
+        var gfx = elementRegistry.getGraphics(elementId);
+        var iconGfx = domQuery('path', gfx);
+
+        expect(iconGfx, `icon on element <#${ elementId }>`).not.to.exist;
+      }
+    }));
+
+  });
+
 });
+
+function isCollapsedSubProcess(element) {
+  return isAny(element, [
+    'bpmn:SubProcess',
+    'bpmn:AdHocSubProcess',
+    'bpmn:Transaction'
+  ]) && !isExpanded(element);
+}

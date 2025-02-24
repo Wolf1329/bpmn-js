@@ -54,7 +54,7 @@ describe('features/snapping - BpmnCreateMoveSnapping', function() {
       var diagramXML = require('./BpmnCreateMoveSnapping.process.bpmn');
 
 
-      it('should snap particpant if constrained', function(done) {
+      it('should snap participant if constrained', function(done) {
 
         bootstrapModeler(diagramXML, {
           container: TestContainer.get(this),
@@ -279,7 +279,8 @@ describe('features/snapping - BpmnCreateMoveSnapping', function() {
             x: externalLabelMid.x - externalLabelBounds.width / 2,
             y: externalLabelMid.y - externalLabelBounds.height / 2,
             width: externalLabelBounds.width,
-            height: externalLabelBounds.height
+            height: externalLabelBounds.height,
+            businessObject: intermediateThrowEvent.businessObject
           });
 
           create.start(canvasEvent({ x: 0, y: 0 }), [ intermediateThrowEvent, label ]);
@@ -565,38 +566,36 @@ describe('features/snapping - BpmnCreateMoveSnapping', function() {
       }));
 
 
-      it('should correctly set snap origins', function(done) {
-
-        var test = inject(function(elementRegistry, copyPaste, eventBus) {
+      it('should correctly set snap origins', inject(
+        function(elementRegistry, copyPaste, eventBus) {
 
           // given
           var task1 = elementRegistry.get('Task_1');
-          eventBus.on('create.start', function(event) {
+
+          var startListener = sinon.spy(function(event) {
 
             var snapContext = event.context.snapContext;
             var snapLocations = snapContext.getSnapLocations();
             var sequenceFlowSnapOrigin = snapContext.getSnapOrigin(snapLocations[3]);
 
             // then
-            try {
-              expect(sequenceFlowSnapOrigin.x).to.be.eql(-30);
-              expect(sequenceFlowSnapOrigin.y).to.be.eql(-10);
-
-              done();
-            } catch (error) {
-              done(error);
-            }
+            expect(sequenceFlowSnapOrigin.x).to.be.eql(-30);
+            expect(sequenceFlowSnapOrigin.y).to.be.eql(-10);
           });
+
+          eventBus.on('create.start', startListener);
 
           // when
           copyPaste.copy(task1);
           copyPaste.paste();
 
-        });
+          // then
+          expect(startListener).to.have.been.called;
+        }
+      ));
 
-        test();
-      });
     });
+
   });
 
 

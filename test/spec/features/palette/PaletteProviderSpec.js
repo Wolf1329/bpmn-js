@@ -62,6 +62,7 @@ describe('features/palette', function() {
       expect(elements).to.have.length(2);
       expect(is(elements[0], 'bpmn:SubProcess')).to.be.true;
       expect(is(elements[1], 'bpmn:StartEvent')).to.be.true;
+      expect(elements[0].di.isExpanded).to.be.true;
     }));
 
 
@@ -91,11 +92,28 @@ describe('features/palette', function() {
   });
 
 
+  describe('gateway', function() {
+
+    it('should set gateway marker', inject(function(dragging) {
+
+      // when
+      triggerPaletteEntry('create.exclusive-gateway');
+
+      // then
+      var context = dragging.context(),
+          elements = context.data.elements;
+
+      expect(elements).to.have.length(1);
+      expect(is(elements[0], 'bpmn:ExclusiveGateway')).to.be.true;
+      expect(elements[0].di.isMarkerVisible).to.be.true;
+    }));
+
+  });
+
+
   describe('tools', function() {
 
-    // skip on PhantomJS to prevent unwanted <forEach> behaviors
-    // cf. https://github.com/bpmn-io/diagram-js/pull/517
-    (isPhantomJS() ? it.skip : it)('should not fire <move> on globalConnect', inject(
+    it('should not fire <move> on globalConnect', inject(
       function(eventBus) {
 
         // given
@@ -126,8 +144,4 @@ function triggerPaletteEntry(id) {
       entry.action.click(createMoveEvent(0, 0));
     }
   });
-}
-
-function isPhantomJS() {
-  return /PhantomJS/.test(window.navigator.userAgent);
 }

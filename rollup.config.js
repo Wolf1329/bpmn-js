@@ -1,9 +1,9 @@
-import { terser } from 'rollup-plugin-terser';
+import terser from '@rollup/plugin-terser';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import json from 'rollup-plugin-json';
+import json from '@rollup/plugin-json';
+import replace from '@rollup/plugin-replace';
 import license from 'rollup-plugin-license';
-import replace from 'rollup-plugin-replace';
 
 import {
   readFileSync
@@ -92,9 +92,10 @@ function banner(bundleName, minified) {
   });
 }
 
-function pgl(plugins=[], env='production') {
+function pgl(plugins = [], env = 'production') {
   return [
     replace({
+      preventAssignment: true,
       'process.env.NODE_ENV': JSON.stringify(env)
     }),
     nodeResolve(),
@@ -128,7 +129,7 @@ function processTemplate(str, args) {
     var replacement = args[n];
 
     if (!replacement) {
-      throw new Error('unknown template {{ ' + n + '}}');
+      throw new Error(`unknown template {{ ${ n } }}`);
     }
 
     return replacement;

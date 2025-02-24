@@ -1,3 +1,5 @@
+import { expectToBeAccessible } from '@bpmn-io/a11y';
+
 import Modeler from 'lib/Modeler';
 import Viewer from 'lib/Viewer';
 import NavigatedViewer from 'lib/NavigatedViewer';
@@ -46,9 +48,6 @@ describe('Modeler', function() {
 
     modeler = new Modeler({
       container: container,
-      keyboard: {
-        bindTo: document
-      }
     });
 
     setBpmnJS(modeler);
@@ -83,6 +82,15 @@ describe('Modeler', function() {
 
   it('should import nested lanes', function() {
     var xml = require('./features/modeling/lanes/lanes.bpmn');
+    return createModeler(xml).then(function(result) {
+
+      expect(result.error).not.to.exist;
+    });
+  });
+
+
+  it('should import vertical collaboration', function() {
+    var xml = require('../fixtures/bpmn/collaboration-vertical.bpmn');
     return createModeler(xml).then(function(result) {
 
       expect(result.error).not.to.exist;
@@ -207,6 +215,19 @@ describe('Modeler', function() {
   });
 
 
+  it('should include Outline module by default', function() {
+
+    // given
+    var modeler = new Modeler();
+
+    // when
+    var outline = modeler.get('outline', false);
+
+    // then
+    expect(outline).to.exist;
+  });
+
+
   describe('overlay support', function() {
 
     it('should allow to add overlays', function() {
@@ -283,7 +304,8 @@ describe('Modeler', function() {
         'setColor',
         'directEditing',
         'find',
-        'moveToOrigin'
+        'moveToOrigin',
+        'replaceElement'
       ];
 
       var modeler = new Modeler();
@@ -506,18 +528,6 @@ describe('Modeler', function() {
   });
 
 
-  it('should create new diagram - Legacy', function(done) {
-    var modeler = new Modeler({ container: container });
-    modeler.createDiagram(function(err, warnings) {
-
-      expect(warnings).to.exist;
-      expect(warnings).to.have.length(0);
-
-      done(err);
-    });
-  });
-
-
   describe('dependency injection', function() {
 
     it('should provide self as <bpmnjs>', function() {
@@ -717,6 +727,8 @@ describe('Modeler', function() {
 
 
     it('should copy + paste via serialized tree', function() {
+
+      this.timeout(3000);
 
       var aXML = require('./Modeler.copy-paste.complex.bpmn');
       var bXML = require('./Modeler.copy-paste.empty.bpmn');
@@ -918,6 +930,21 @@ describe('Modeler', function() {
   it('should expose Viewer and NavigatedViewer', function() {
     expect(Modeler.Viewer).to.equal(Viewer);
     expect(Modeler.NavigatedViewer).to.equal(NavigatedViewer);
+  });
+
+
+  describe('accessibility', function() {
+
+    it('should report no issues', async function() {
+
+      // given
+      const xml = require('../fixtures/bpmn/simple.bpmn');
+      await createModeler(xml);
+
+      // then
+      await expectToBeAccessible(container);
+    });
+
   });
 
 });

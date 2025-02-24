@@ -28,6 +28,12 @@ import {
   is
 } from 'lib/util/ModelUtil';
 
+import { isRoot } from 'diagram-js/lib/util/ModelUtil';
+
+/**
+ * @typedef {import('../../../../lib/model/Types').Element} Element
+ */
+
 
 describe('features/copy-paste', function() {
 
@@ -208,7 +214,7 @@ describe('features/copy-paste', function() {
       });
 
       // then
-      expect(rootElement.children).to.have.length(9);
+      expect(rootElement.children).to.have.length(13);
 
       var subProcesses = elements.filter(function(element) {
         return is(element, 'bpmn:SubProcess');
@@ -221,7 +227,7 @@ describe('features/copy-paste', function() {
 
     describe('integration', function() {
 
-      it('should copy conditional and default flow properties',
+      it('should copy conditionExpression and default flow properties',
         inject(function(canvas, copyPaste, elementRegistry, modeling) {
 
           // given
@@ -258,11 +264,12 @@ describe('features/copy-paste', function() {
 
           expect(conditionalFlow).to.exist;
           expect(defaultFlow).to.exist;
+          expect(Object.prototype.propertyIsEnumerable.call(taskBo, 'default')).to.be.false;
         })
       );
 
 
-      it('should copy attacher properties', inject(function(canvas, copyPaste, elementRegistry) {
+      it('should copy attachedToRef properties', inject(function(canvas, copyPaste, elementRegistry) {
 
         // given
         var task = elementRegistry.get('Task_1'),
@@ -290,11 +297,13 @@ describe('features/copy-paste', function() {
         });
 
         // then
-        expect(getBusinessObject(boundaryEvent).attachedToRef).to.equal(getBusinessObject(task));
+        var boundaryEventBo = getBusinessObject(boundaryEvent);
+
+        expect(boundaryEventBo.attachedToRef).to.equal(getBusinessObject(task));
       }));
 
 
-      it('should copy loop characteristics porperties',
+      it('should copy loopCharacteristics properties',
         inject(function(canvas, copyPaste, elementRegistry, modeling) {
 
           // given
@@ -369,7 +378,7 @@ describe('features/copy-paste', function() {
 
 
       it('should copy label', inject(
-        function(canvas, copyPaste, elementRegistry, modeling) {
+        function(canvas, copyPaste, elementRegistry) {
 
           // given
           var startEvent = elementRegistry.get('StartEvent_1'),
@@ -895,7 +904,7 @@ describe('features/copy-paste', function() {
 
         // then
         // elements pasted with original IDs
-        forEach([ 'SUB_PROCESS', 'SUB_TASK', 'SUB_BOUNDARY'], function(id) {
+        forEach([ 'SUB_PROCESS', 'SUB_TASK', 'SUB_BOUNDARY' ], function(id) {
 
           var el = find(pastedElements, function(el) {
             return el.id === id;
@@ -917,9 +926,6 @@ describe('features/copy-paste', function() {
 
 
   describe('complex', function() {
-
-    // TODO(nikku): drop once legacy PhantomJS is dropped
-    this.timeout(6000);
 
     beforeEach(bootstrapModeler(complexXML, {
       modules: testModules,
@@ -971,7 +977,7 @@ describe('features/copy-paste', function() {
 /**
  * Integration test involving copying, pasting, moving, undoing and redoing.
  *
- * @param {string|Array<string>} elementIds
+ * @param {string|string[]} elementIds
  */
 function integrationTest(elementIds) {
   if (!isArray(elementIds)) {
@@ -1014,7 +1020,7 @@ function integrationTest(elementIds) {
       });
 
       // (4) move all elements except root
-      modeling.moveElements(elementRegistry.filter(isRoot), { x: 50, y: -50 });
+      modeling.moveElements(elementRegistry.filter(element => !isRoot(element)), { x: 50, y: -50 });
 
       // when
       // (5) undo moving, pasting and removing
@@ -1054,10 +1060,6 @@ function integrationTest(elementIds) {
     });
 
   };
-}
-
-function isRoot(element) {
-  return !!element.parent;
 }
 
 function getPropertyForElements(elements, property) {
@@ -1137,9 +1139,9 @@ function _findDescriptorsInTree(elements, tree, depth) {
 /**
  * Copy elements.
  *
- * @param {Array<string|djs.model.Base} elements
+ * @param {(string|Element)[]} elements
  *
- * @returns {Object}
+ * @return {Object}
  */
 function copy(elements) {
   if (!isArray(elements)) {
